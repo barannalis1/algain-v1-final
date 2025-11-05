@@ -1,5 +1,176 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+const dreamKeywordThemes = [
+  {
+    id: 'water',
+    regex: /(deniz|okyanus|su|dalga|yağmur|nehir)/i,
+    tag: 'Su Elementi',
+    mood: 'Sakinleştirici',
+    tip: 'Su sembolleri duygularınızın akışını temsil ediyor, nefes egzersizleriyle bu akışı dengeleyin.',
+  },
+  {
+    id: 'flight',
+    regex: /(uç|uçmak|kanat|gökyüzü|bulut)/i,
+    tag: 'Özgürlük Arzusu',
+    mood: 'Yükselen Enerji',
+    tip: 'Uçuş temaları cesur adımlar atma isteğinizi gösteriyor, gün içinde minik riskler almayı deneyin.',
+  },
+  {
+    id: 'mystery',
+    regex: /(karanlık|gölge|labirent|orman|gece)/i,
+    tag: 'Gölgelerle Çalışma',
+    mood: 'İçe Dönüş',
+    tip: 'Gölge temaları iç sesinizi dinlemeniz gerektiğine işaret eder, akşamları kısa meditasyonlar ekleyin.',
+  },
+  {
+    id: 'crowd',
+    regex: /(kalabalık|topluluk|arkadaş|aile|sohbet)/i,
+    tag: 'Bağ Kurma',
+    mood: 'Sosyal',
+    tip: 'Kalabalık sembolleri paylaşım ihtiyacınızı hatırlatır, seçtiğiniz fal sonuçlarını sevdiklerinizle paylaşın.',
+  },
+  {
+    id: 'journey',
+    regex: /(yolculuk|tren|yol|araç|köprü)/i,
+    tag: 'Yeni Yolculuk',
+    mood: 'Keşif',
+    tip: 'Yolculuk temaları gündemdeki geçişlere dikkat çeker, planlarınıza esneklik ekleyin.',
+  },
+];
+
+const emotionThemes = [
+  {
+    regex: /(mutlu|neşeli|sevgi|şükran|heyecan)/i,
+    tag: 'Sevgi enerjisi',
+    mood: 'Coşkulu',
+    tip: 'Pozitif duygular sezgisel enerjinizi yükseltir, afirmasyonlarınızı yüksek sesle tekrar edin.',
+  },
+  {
+    regex: /(korku|panik|kaygı|endişe|ürkütücü)/i,
+    tag: 'Korku Şifası',
+    mood: 'Dönüşen',
+    tip: 'Kaygılı semboller için topraklanma egzersizleri ekleyin, kahve falınızdan çıkan işaretleri not alın.',
+  },
+  {
+    regex: /(huzur|sakin|dingin|ferah)/i,
+    tag: 'İçsel Dinginlik',
+    mood: 'Huzurlu',
+    tip: 'Sakin duygular sezgisel alanınızın dengede olduğunu gösterir, gece ritüelinize teşekkür günlüğü ekleyin.',
+  },
+];
+
+const serviceExtraTips = {
+  'Kahve Falı': 'Kahve falınızdan gelen telve motiflerini sabah niyetlerinize dahil edin.',
+  'Tarot Falı': 'Tarot kartlarınızdan seçtiğiniz arketipleri gün boyunca mikro hatırlatmalarla pekiştirin.',
+  'Yıldız Falı': 'Yıldız falınızın zamanlama ipuçlarını toplantı ve buluşmalarınıza göre planlayın.',
+  'El Falı': 'El falınızdan çıkan çizgi yorumlarını beden farkındalık egzersizleriyle destekleyin.',
+  'Astronomi Falı': 'Astronomi falınızın rasyonel analizini hedeflerinize dair veri destekli kararlarla birleştirin.',
+  'Rüya Falı': 'Rüya falınızın mesajlarını uykuya dalmadan önce tekrar edip bilinçaltınızı yönlendirin.',
+};
+
+function analyzeDreamContent(text, selectedServices, uploads) {
+  const normalized = (text || '').toLowerCase();
+  const tags = new Set();
+  const takeaways = [];
+  let detectedMood = '';
+
+  dreamKeywordThemes.forEach((theme) => {
+    if (theme.regex.test(normalized)) {
+      tags.add(theme.tag);
+      takeaways.push(theme.tip);
+      if (!detectedMood) {
+        detectedMood = theme.mood;
+      }
+    }
+  });
+
+  emotionThemes.forEach((theme) => {
+    if (theme.regex.test(normalized)) {
+      tags.add(theme.tag);
+      takeaways.push(theme.tip);
+      if (!detectedMood) {
+        detectedMood = theme.mood;
+      }
+    }
+  });
+
+  if (uploads.coffee) {
+    tags.add('Kahve sembolleri');
+    takeaways.push('Yüklediğiniz kahve fincanı fotoğrafı aroma ve tortu sembollerinin detaylı analizine olanak tanıyor.');
+  }
+
+  if (uploads.palm) {
+    tags.add('Avuç içi rehberliği');
+    takeaways.push('El fotoğrafınız yaşam çizgisi ve sezgisel çizgilerinizi koçluk planına taşıyor.');
+  }
+
+  if (uploads.tarotUpload) {
+    tags.add('Kişisel tarot açılımı');
+    takeaways.push('Kendi tarot açılımınız enerji alanınızı doğrudan videoya taşıyacak özel semboller sunuyor.');
+  }
+
+  selectedServices.forEach((service) => {
+    const tip = serviceExtraTips[service];
+    if (tip) {
+      takeaways.push(tip);
+    }
+  });
+
+  const trimmed = (text || '').trim();
+  const sentences = trimmed
+    ? trimmed.split(/(?<=[.!?])\s+/).filter((sentence) => sentence && sentence.trim().length > 0)
+    : [];
+  const firstSentence = sentences[0]?.trim();
+
+  let synopsis = '';
+  if (firstSentence) {
+    const cleaned = firstSentence.replace(/[.!?]+$/, '');
+    synopsis = `Rüya anlatımınız "${cleaned}" cümlesiyle açılıyor.`;
+  }
+
+  if (detectedMood) {
+    synopsis = synopsis
+      ? `${synopsis} Duygusal ton ${detectedMood.toLowerCase()} bir dalgada ilerliyor.`
+      : `Duygusal ton ${detectedMood.toLowerCase()} bir dalgada ilerliyor.`;
+  }
+
+  const primaryTag = Array.from(tags)[0];
+  if (primaryTag) {
+    synopsis = synopsis
+      ? `${synopsis} ${primaryTag} temasını güçlendirmek için ritüellerinizi uyarlıyoruz.`
+      : `${primaryTag} temasını güçlendirmek için ritüellerinizi uyarlıyoruz.`;
+  }
+
+  if (!trimmed) {
+    synopsis = 'Rüyanızı detaylandırdıkça yapay zekâ sembolleri daha derinlemesine ilişkilendirecek.';
+  }
+
+  if (!detectedMood) {
+    detectedMood = trimmed ? 'Meraklı' : 'Başlangıç';
+  }
+
+  if (tags.size === 0) {
+    tags.add('Sezgisel keşif');
+  }
+
+  return {
+    tags: Array.from(tags),
+    mood: detectedMood,
+    takeaways: Array.from(new Set(takeaways)),
+    synopsis,
+  };
+}
+
+function formatStoryboardTimestamp(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const seconds = Math.floor(totalSeconds % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
 const interpretationTemplates = [
   {
     id: 'growth',
@@ -238,6 +409,48 @@ const serviceVideoScenes = {
   'Rüya Falı': 'Rüya sembollerini parlayan ikonlara dönüştüren parçacık efektleri kullanın.',
 };
 
+function createVideoStoryboard({ focusId, dreamTags, selectedServices, focusKeyword, dreamMood }) {
+  let currentSeconds = 0;
+  const scenes = [];
+
+  const addScene = (description, duration = 8) => {
+    scenes.push({ time: formatStoryboardTimestamp(currentSeconds), description });
+    currentSeconds += duration;
+  };
+
+  const focusLabel = focusPresets[focusId]?.label || 'Ritüel';
+  addScene(
+    `Açılışta ${focusLabel.toLowerCase()} odağını ${focusKeyword} temasına bağlayan kozmik bir intro gösterilir.`,
+    7
+  );
+
+  if (dreamTags.length > 0) {
+    addScene(`${dreamTags[0]} vurgusunu güçlendiren parçacık animasyonlarıyla rüyanın ana motifleri canlandırılır.`, 7);
+  }
+
+  if (dreamMood) {
+    addScene(
+      `${dreamMood.toLowerCase()} duygusunu destekleyen arka plan müziği ve renk paletiyle geçiş sahnesi hazırlanır.`,
+      6
+    );
+  }
+
+  selectedServices.forEach((service) => {
+    const scene = serviceVideoScenes[service];
+    addScene(scene || `${service} ritüelini temsil eden görsellerle kişisel dokunuş eklenir.`, 8);
+  });
+
+  const affirmation = focusPresets[focusId]?.affirmation;
+  addScene(
+    affirmation
+      ? `Finalde kişisel afirmasyonunuz "${affirmation}" holografik yazıyla belirir.`
+      : 'Finalde DreamOracle logosu ve paylaşım çağrısı görünür.',
+    5
+  );
+
+  return scenes;
+}
+
 function parseTimeValue(value) {
   const [hours, minutes] = value.split(':').map((part) => parseInt(part, 10));
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {
@@ -255,16 +468,17 @@ function formatTimeValue(totalMinutes) {
   return `${hours}:${minutes}`;
 }
 
-function generateDailyPlan({ summary, focusId, selectedServices, startTime }) {
+function generateDailyPlan({ summary, focusId, selectedServices, startTime, primaryTag }) {
   const focus = focusPresets[focusId];
   const baseMinutes = parseTimeValue(startTime || '07:30');
   return planBlueprint.map((step) => {
     const time = formatTimeValue(baseMinutes + step.offsetMinutes);
+    const tagSentence = primaryTag ? `Öne çıkan tema: ${primaryTag}.` : '';
     if (!focus) {
       return {
         time,
         title: step.fallbackTitle,
-        description: `${step.fallbackDescription} Seçtiğiniz ritüeller: ${selectedServices.join(', ') || 'Rüya Falı'}.`,
+        description: `${step.fallbackDescription} Seçtiğiniz ritüeller: ${selectedServices.join(', ') || 'Rüya Falı'}. ${tagSentence}`.trim(),
       };
     }
 
@@ -276,7 +490,7 @@ function generateDailyPlan({ summary, focusId, selectedServices, startTime }) {
       return {
         time,
         title: focus.morning.title,
-        description: `${focus.morning.description} ${serviceSentence}`,
+        description: `${focus.morning.description} ${serviceSentence} ${tagSentence}`.trim(),
       };
     }
 
@@ -284,7 +498,7 @@ function generateDailyPlan({ summary, focusId, selectedServices, startTime }) {
       return {
         time,
         title: `${focus.label} odaklı gün ortası reseti`,
-        description: `${focus.midday} ${serviceSentence}`,
+        description: `${focus.midday} ${serviceSentence} ${tagSentence}`.trim(),
       };
     }
 
@@ -292,14 +506,14 @@ function generateDailyPlan({ summary, focusId, selectedServices, startTime }) {
       return {
         time,
         title: `${focus.label} enerjisiyle akşam eşlemesi`,
-        description: `${focus.evening} ${serviceSentence}`,
+        description: `${focus.evening} ${serviceSentence} ${tagSentence}`.trim(),
       };
     }
 
     return {
       time,
       title: `${focus.label} kapanış ritüeli`,
-      description: `${focus.night} ${serviceSentence} Rüya özetiniz: ${summary}.`,
+      description: `${focus.night} ${serviceSentence} Rüya özetiniz: ${summary}. ${tagSentence}`.trim(),
     };
   });
 }
@@ -333,6 +547,11 @@ export default function Home() {
   const [shareStatus, setShareStatus] = useState('');
   const [interpretationInsights, setInterpretationInsights] = useState([]);
   const [personalAffirmation, setPersonalAffirmation] = useState('');
+  const [dreamTags, setDreamTags] = useState([]);
+  const [dreamMood, setDreamMood] = useState('');
+  const [dreamSynopsis, setDreamSynopsis] = useState('');
+  const [videoStoryboard, setVideoStoryboard] = useState([]);
+  const [videoLink, setVideoLink] = useState('');
   const [selectedServices, setSelectedServices] = useState(['Kahve Falı', 'Tarot Falı']);
   const [personalFocus, setPersonalFocus] = useState('growth');
   const [notificationTime, setNotificationTime] = useState('07:30');
@@ -383,8 +602,9 @@ export default function Home() {
         focusId: personalFocus,
         selectedServices,
         startTime: notificationTime,
+        primaryTag: dreamTags[0],
       }),
-    [dreamText, notificationTime, personalFocus, selectedServices]
+    [dreamText, notificationTime, personalFocus, selectedServices, dreamTags]
   );
 
   const activeChannels = useMemo(
@@ -423,9 +643,10 @@ export default function Home() {
     const serviceScenes = selectedServices
       .map((service) => serviceVideoScenes[service])
       .filter(Boolean);
+    const tagScenes = dreamTags.map((tag) => `${tag} temasını öne çıkaran geçişler ekleyin.`);
 
-    return Array.from(new Set([...baseVideoScenes, ...focusScenes, ...serviceScenes]));
-  }, [interpretation, personalFocus, selectedServices]);
+    return Array.from(new Set([...baseVideoScenes, ...focusScenes, ...serviceScenes, ...tagScenes]));
+  }, [interpretation, personalFocus, selectedServices, dreamTags]);
 
   useEffect(() => {
     return () => {
@@ -466,6 +687,16 @@ export default function Home() {
     if (isRecording) return;
     if (typeof window === 'undefined' || !navigator.mediaDevices) {
       setRecordingError('Tarayıcı mikrofon kaydını desteklemiyor.');
+      return;
+    }
+
+    if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      setRecordingError('Tarayıcınız mikrofon erişimini desteklemiyor.');
+      return;
+    }
+
+    if (typeof MediaRecorder === 'undefined') {
+      setRecordingError('Tarayıcınız ses kaydı oluşturmayı desteklemiyor.');
       return;
     }
 
@@ -541,6 +772,11 @@ export default function Home() {
     setInterpretationTitle('');
     setInterpretationInsights([]);
     setPersonalAffirmation('');
+    setDreamTags([]);
+    setDreamMood('');
+    setDreamSynopsis('');
+    setVideoStoryboard([]);
+    setVideoLink('');
     setIsInterpreting(true);
 
     const selectedTemplate = interpretationTemplates[
@@ -549,11 +785,52 @@ export default function Home() {
 
     setTimeout(() => {
       const summary = formatDreamSummary(dreamText);
+      const analysis = analyzeDreamContent(dreamText, selectedServices, {
+        coffee: Boolean(coffeePreview),
+        palm: Boolean(palmPreview),
+        tarotUpload: tarotMode === 'upload' && Boolean(tarotPreview),
+      });
+      const serviceSentence = selectedServices.length
+        ? `Seçtiğiniz ${selectedServices.join(', ')} ritüelleri enerjinizi destekliyor.`
+        : 'Fal seçeneklerinden birini ekleyerek analizi daha da kişiselleştirebilirsiniz.';
+      const uploadSentences = [];
+      if (coffeePreview) {
+        uploadSentences.push('Kahve fincanı görseliniz telve desenlerinin okunmasına izin veriyor.');
+      }
+      if (palmPreview) {
+        uploadSentences.push('El fotoğrafınız karakter çizgilerinin koçluk planına taşınmasını sağlıyor.');
+      }
+      if (tarotMode === 'upload' && tarotPreview) {
+        uploadSentences.push('Tarot açılımı görseliniz video storyboarduna kişisel kart enerjilerini ekliyor.');
+      } else if (tarotMode === 'deck') {
+        uploadSentences.push('DreamOracle destesi otomatik kart seçimiyle arketiplerinizi dengeye getiriyor.');
+      }
+      const moodSentence = analysis.mood
+        ? `Duygusal tonunuz ${analysis.mood.toLowerCase()} bir frekansta ilerliyor.`
+        : '';
+      const tagSentence =
+        analysis.tags.length > 0 ? `${analysis.tags[0]} motifleri rehber mesajlarını vurguluyor.` : '';
+      const interpretationText = [
+        selectedTemplate.body(summary, focusKeyword),
+        moodSentence,
+        tagSentence,
+        serviceSentence,
+        uploadSentences.join(' '),
+      ]
+        .filter(Boolean)
+        .join(' ');
+
       setInterpretationTitle(selectedTemplate.title);
-      setInterpretation(selectedTemplate.body(summary, focusKeyword));
-      setInterpretationInsights(interpretationAdvice[selectedTemplate.id] || []);
+      setInterpretation(interpretationText);
+      const combinedInsights = Array.from(
+        new Set([...(interpretationAdvice[selectedTemplate.id] || []), ...analysis.takeaways, ...uploadSentences])
+      );
+      setInterpretationInsights(combinedInsights);
       setPersonalAffirmation(focusPresets[selectedTemplate.id]?.affirmation || '');
       setPersonalFocus(selectedTemplate.id);
+      setDreamTags(analysis.tags);
+      setDreamMood(analysis.mood);
+      setDreamSynopsis(analysis.synopsis);
       setIsInterpreting(false);
     }, 1200);
   };
@@ -566,8 +843,20 @@ export default function Home() {
     }
 
     setVideoStatus('Rüya yorumunuz sinematik bir videoya dönüştürülüyor...');
+    setVideoStoryboard([]);
+    setVideoLink('');
     setTimeout(() => {
-      setVideoStatus('Video taslağınız hazır! Paylaşmak için "Videoyu Paylaş" seçeneğini kullanabilirsiniz.');
+      const storyboard = createVideoStoryboard({
+        focusId: personalFocus,
+        dreamTags,
+        selectedServices,
+        focusKeyword,
+        dreamMood,
+      });
+      const newLink = `https://dreamoracle.space/paylas/${Date.now().toString(36)}`;
+      setVideoStoryboard(storyboard);
+      setVideoLink(newLink);
+      setVideoStatus('Video taslağınız hazır! Aşağıdaki storyboardu gözden geçirip paylaşabilirsiniz.');
     }, 1500);
   };
 
@@ -578,15 +867,27 @@ export default function Home() {
       return;
     }
 
+    if (!videoLink) {
+      setShareStatus('Önce videonuzu oluşturun.');
+      return;
+    }
+
     try {
-      if (navigator.share) {
+      if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
-          title: 'Rüya Yolculuğum',
+          title: 'DreamOracle Rüya Yorumu',
           text: interpretation,
+          url: videoLink,
         });
         setShareStatus('Video bağlantınız başarıyla paylaşıldı!');
+        return;
+      }
+
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(videoLink);
+        setShareStatus(`Video bağlantısı panoya kopyalandı: ${videoLink}`);
       } else {
-        setShareStatus('Tarayıcınız doğrudan paylaşımı desteklemiyor, videoyu indirip manuel olarak paylaşabilirsiniz.');
+        setShareStatus(`Tarayıcınız doğrudan paylaşımı desteklemiyor, bağlantınızı manuel olarak paylaşabilirsiniz: ${videoLink}`);
       }
     } catch (error) {
       setShareStatus('Paylaşım iptal edildi veya bir sorun oluştu.');
@@ -874,6 +1175,28 @@ export default function Home() {
                 ? 'Semboller, duygular ve fal tercihleri harmanlanıyor...'
                 : interpretation || 'Rüyayı sesli veya yazılı anlatın ve “Rüyayı Yorumla” butonuna dokunun.'}
             </p>
+            {(dreamMood || dreamSynopsis) && (
+              <div className="mt-4 rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 p-4 text-sm text-fuchsia-100">
+                {dreamMood && (
+                  <p className="font-semibold uppercase tracking-wide">Duygusal Ton: {dreamMood}</p>
+                )}
+                {dreamSynopsis && (
+                  <p className="mt-2 text-xs text-fuchsia-100/80">{dreamSynopsis}</p>
+                )}
+              </div>
+            )}
+            {dreamTags.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {dreamTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-100"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
             {interpretationInsights.length > 0 && (
               <ul className="mt-5 space-y-2 text-sm text-indigo-100">
                 {interpretationInsights.map((tip) => (
@@ -920,6 +1243,30 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+              {videoStoryboard.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">Storyboard</p>
+                  <ol className="mt-3 space-y-2 text-sm text-indigo-100">
+                    {videoStoryboard.map((scene) => (
+                      <li
+                        key={`${scene.time}-${scene.description}`}
+                        className="flex items-start gap-3"
+                      >
+                        <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-200">
+                          {scene.time}
+                        </span>
+                        <span>{scene.description}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  {videoLink && (
+                    <p className="mt-4 break-words text-xs text-indigo-300">
+                      Paylaşım bağlantınız:{' '}
+                      <span className="font-semibold text-emerald-200">{videoLink}</span>
+                    </p>
+                  )}
                 </div>
               )}
             </div>
