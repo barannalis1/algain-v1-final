@@ -81,32 +81,213 @@ const coachingFocus = [
   'Günlük alışkanlıkları sürdürülebilir ritüellere dönüştürme',
 ];
 
-const defaultDailyPlan = [
+const focusPresets = {
+  growth: {
+    label: 'Dönüşüm',
+    morning: {
+      title: 'Şafakta dönüşüm niyeti',
+      description:
+        'Bilinçaltınızın sunduğu değişim mesajlarını yazarak güne başlayın, nefes çalışmasıyla bedeninizi uyandırın.',
+    },
+    midday:
+      'Gün ortasında rüyanızdaki sembolleri tekrar gözden geçirip minik ama cesur bir aksiyon planı çıkarın.',
+    evening:
+      'Gün batımında kısa bir yürüyüşle bedeninizi hareketlendirin, sezgilerinizi yıldızların ritmiyle hizalayın.',
+    night:
+      'Uykuya dalmadan hemen önce günün öğrenimlerini rüya günlüğünüze ekleyin ve paylaşmak istediğiniz içgörüleri seçin.',
+    affirmation: 'Kendimi dönüştürmeye hazırım, her sembol bana yeni bir kapı açıyor.',
+  },
+  balance: {
+    label: 'Denge',
+    morning: {
+      title: 'Zihin-beden uyum ritüeli',
+      description:
+        'Güne hafif esneme ve anda kalma egzersizleri ile başlayın, rüyanızdaki dengelenmesi gereken alanları not alın.',
+    },
+    midday:
+      'Kahve veya bitki çayı eşliğinde fal notlarınızı inceleyin, iş ve özel yaşam arasında mikro denge ayarlamaları yapın.',
+    evening:
+      'Akşam saatlerinde sevdiğiniz biriyle bağlantı kurun, empati ve şükür cümleleri paylaşın.',
+    night:
+      'Uykudan önce sakinleştirici bir meditasyonla zihninizi boşaltın, rüya niyeti belirleyin.',
+    affirmation: 'Hayatımın her alanına uyum ve zarafet davet ediyorum.',
+  },
+  guidance: {
+    label: 'Rehberlik',
+    morning: {
+      title: 'Ruhsal rehberlerle buluşma',
+      description:
+        'Rüya rehberlerinizden aldığınız mesajları sesli tekrar edin, sezgilerinize teşekkür edin.',
+    },
+    midday:
+      'Tarot veya yıldız falınızdan seçtiğiniz kartı/konumu gün ortası kararlarınıza rehber olarak atayın.',
+    evening:
+      'Günlük hedeflerinizi gözden geçirirken sezgisel yazı egzersizi yapın, rehberlerinizden yeni işaretler isteyin.',
+    night:
+      'Uyumadan önce minik bir teşekkür ritüeli oluşturup rüya alanınızı koruyun.',
+    affirmation: 'Evrenin rehberliği daima yanımda, işaretleri sevgiyle takip ediyorum.',
+  },
+};
+
+const planBlueprint = [
   {
-    time: '07:30',
-    title: 'Güne niyet belirleyerek başla',
-    description:
+    key: 'morning',
+    offsetMinutes: 0,
+    fallbackTitle: 'Güne niyet belirleyerek başla',
+    fallbackDescription:
       'Rüyanızdan gelen içgörülerle uyumlu niyet cümleleri yazın ve 5 dakikalık nefes çalışması yapın.',
   },
   {
-    time: '12:15',
-    title: 'Fincan molasında kozmik farkındalık',
-    description:
+    key: 'midday',
+    offsetMinutes: 260,
+    fallbackTitle: 'Fincan molasında kozmik farkındalık',
+    fallbackDescription:
       'Kahve falınızdan çıkan sembolleri tekrar hatırlayıp gün ortası kararlarınıza yansıtın.',
   },
   {
-    time: '18:45',
-    title: 'Yıldız senkronizasyonu',
-    description:
+    key: 'evening',
+    offsetMinutes: 660,
+    fallbackTitle: 'Yıldız senkronizasyonu',
+    fallbackDescription:
       'Gün batımında kısa bir yürüyüş yapın ve gökyüzünü gözlemleyerek beden-zihin dengesini yenileyin.',
   },
   {
-    time: '22:00',
-    title: 'Rüya günlüğü ve paylaşım',
-    description:
+    key: 'night',
+    offsetMinutes: 900,
+    fallbackTitle: 'Rüya günlüğü ve paylaşım',
+    fallbackDescription:
       'Günün sonunda rüya günlüğünüze yeni deneyimleri ekleyin, dileyenler için videolu paylaşım hazırlayın.',
   },
 ];
+
+const channelLabels = {
+  mobile: 'Mobil Uygulama',
+  email: 'E-posta',
+  whatsapp: 'WhatsApp',
+};
+
+const serviceHighlights = {
+  'Kahve Falı': 'Fincanınızdaki sembolleri günlük kararlarınıza taşıyın.',
+  'Tarot Falı': 'Günün kartı rehberliğini görev listenize not edin.',
+  'Yıldız Falı': 'Gökyüzü transitlerini enerji planınıza ekleyin.',
+  'El Falı': 'Avuç içi sembollerini beden farkındalığı egzersizleriyle destekleyin.',
+  'Astronomi Falı': 'Bilimsel veriyle ritminizi hizalayın, odak saatlerinizi yeniden kurgulayın.',
+  'Rüya Falı': 'Bilinçaltı notlarınızı rüya günlüğünüzle entegre edin.',
+};
+
+const interpretationAdvice = {
+  growth: [
+    'Değişim çağrısına kulak verin ve bugün tek bir yeni alışkanlık başlatın.',
+    'Destek aldığınız koçunuzla dönüşüm hedeflerinizi paylaşın.',
+    'Rüya günlüğünüze güçlü hissettiren sembolleri çizin veya kaydedin.',
+  ],
+  balance: [
+    'Rüyanızda beliren zıtlıkları eşleştirerek günlük planınıza ufak molalar yerleştirin.',
+    'Enerji seviyenize göre işleri 25 dakikalık odak bloklarına bölün.',
+    'Akşam saatlerinde sevdiklerinizle paylaşarak dengeyi güçlendirin.',
+  ],
+  guidance: [
+    'İçsel rehberliğinizi duymak için 10 dakikalık sezgisel yazı çalışması yapın.',
+    'Tarot veya yıldız falınızdan gelen mesajı günün temasına dönüştürün.',
+    'Yatmadan önce rehberlerinize teşekkür eden kısa bir meditasyon ekleyin.',
+  ],
+};
+
+const baseVideoScenes = [
+  'Rüya anlatımınızın ana cümlelerini neon tipografiyle açılışta gösterin.',
+  'Fal kartları ve kozmik sembollerle ara geçişler oluşturun.',
+  'Finalde kişisel afirmasyonunuzla kapanış yapın.',
+];
+
+const focusVideoScenes = {
+  growth: [
+    'Dönüşüm temasını vurgulayan ışık patlamaları ve tomurcuklanan çiçek animasyonları ekleyin.',
+    'Zaman akışını hızlandırılmış şehir manzaralarıyla temsil edin.',
+  ],
+  balance: [
+    'Ying-yang kompozisyonları ve simetrik geometriler kullanın.',
+    'Nefes alış verişini temsil eden yumuşak dalga hareketleri gösterin.',
+  ],
+  guidance: [
+    'Gökyüzü haritaları ve pusula animasyonlarıyla sezgisel rehberliği güçlendirin.',
+    'Kapı veya geçit animasyonlarıyla yeni fırsatların açıldığını hissettirin.',
+  ],
+};
+
+const serviceVideoScenes = {
+  'Kahve Falı': 'Kahve fincanının üstünden yükselen sembolik duman efektleriyle mesajı pekiştirin.',
+  'Tarot Falı': 'Seçilen kartların holografik şekilde ortaya çıktığı sahnelere yer verin.',
+  'Yıldız Falı': 'Gezegenlerin yörüngede dans ettiği bir galaksi zoom efekti ekleyin.',
+  'El Falı': 'Avuç içi çizgilerini ışıklı rotalar olarak beliren grafiklerle canlandırın.',
+  'Astronomi Falı': 'Uydu görüntülerinden alınan gerçek yıldız verilerini görselleştirin.',
+  'Rüya Falı': 'Rüya sembollerini parlayan ikonlara dönüştüren parçacık efektleri kullanın.',
+};
+
+function parseTimeValue(value) {
+  const [hours, minutes] = value.split(':').map((part) => parseInt(part, 10));
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return 450; // 07:30 varsayılanı
+  }
+  return hours * 60 + minutes;
+}
+
+function formatTimeValue(totalMinutes) {
+  const safeMinutes = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hours = Math.floor(safeMinutes / 60)
+    .toString()
+    .padStart(2, '0');
+  const minutes = (safeMinutes % 60).toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function generateDailyPlan({ summary, focusId, selectedServices, startTime }) {
+  const focus = focusPresets[focusId];
+  const baseMinutes = parseTimeValue(startTime || '07:30');
+  return planBlueprint.map((step) => {
+    const time = formatTimeValue(baseMinutes + step.offsetMinutes);
+    if (!focus) {
+      return {
+        time,
+        title: step.fallbackTitle,
+        description: `${step.fallbackDescription} Seçtiğiniz ritüeller: ${selectedServices.join(', ') || 'Rüya Falı'}.`,
+      };
+    }
+
+    const serviceSentence = selectedServices.length
+      ? `Seçtiğiniz ${selectedServices.join(', ')} ritüellerini bu aşamaya dahil edin.`
+      : 'Dilediğiniz bir fal ritüelini ekleyerek deneyimi zenginleştirin.';
+
+    if (step.key === 'morning') {
+      return {
+        time,
+        title: focus.morning.title,
+        description: `${focus.morning.description} ${serviceSentence}`,
+      };
+    }
+
+    if (step.key === 'midday') {
+      return {
+        time,
+        title: `${focus.label} odaklı gün ortası reseti`,
+        description: `${focus.midday} ${serviceSentence}`,
+      };
+    }
+
+    if (step.key === 'evening') {
+      return {
+        time,
+        title: `${focus.label} enerjisiyle akşam eşlemesi`,
+        description: `${focus.evening} ${serviceSentence}`,
+      };
+    }
+
+    return {
+      time,
+      title: `${focus.label} kapanış ritüeli`,
+      description: `${focus.night} ${serviceSentence} Rüya özetiniz: ${summary}.`,
+    };
+  });
+}
 
 function formatDreamSummary(text) {
   if (!text) {
@@ -135,6 +316,16 @@ export default function Home() {
   const [isInterpreting, setIsInterpreting] = useState(false);
   const [videoStatus, setVideoStatus] = useState('');
   const [shareStatus, setShareStatus] = useState('');
+  const [interpretationInsights, setInterpretationInsights] = useState([]);
+  const [personalAffirmation, setPersonalAffirmation] = useState('');
+  const [selectedServices, setSelectedServices] = useState(['Kahve Falı', 'Tarot Falı']);
+  const [personalFocus, setPersonalFocus] = useState('growth');
+  const [notificationTime, setNotificationTime] = useState('07:30');
+  const [notificationChannels, setNotificationChannels] = useState({
+    mobile: true,
+    email: true,
+    whatsapp: false,
+  });
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -149,6 +340,46 @@ export default function Home() {
     if (/el|avuç/i.test(dreamText)) return 'el falı';
     return 'rüya sembolleri';
   }, [dreamText]);
+
+  const selectedServiceSummary = useMemo(() => {
+    if (!selectedServices.length) {
+      return 'Henüz fal tercihi yapılmadı';
+    }
+    return selectedServices.join(' • ');
+  }, [selectedServices]);
+
+  const personalizedPlan = useMemo(
+    () =>
+      generateDailyPlan({
+        summary: formatDreamSummary(dreamText),
+        focusId: personalFocus,
+        selectedServices,
+        startTime: notificationTime,
+      }),
+    [dreamText, notificationTime, personalFocus, selectedServices]
+  );
+
+  const activeChannels = useMemo(
+    () =>
+      Object.entries(notificationChannels)
+        .filter(([, value]) => value)
+        .map(([key]) => channelLabels[key])
+        .filter(Boolean),
+    [notificationChannels]
+  );
+
+  const recommendedVideoScenes = useMemo(() => {
+    if (!interpretation) {
+      return [];
+    }
+
+    const focusScenes = focusVideoScenes[personalFocus] || [];
+    const serviceScenes = selectedServices
+      .map((service) => serviceVideoScenes[service])
+      .filter(Boolean);
+
+    return Array.from(new Set([...baseVideoScenes, ...focusScenes, ...serviceScenes]));
+  }, [interpretation, personalFocus, selectedServices]);
 
   useEffect(() => {
     return () => {
@@ -216,6 +447,8 @@ export default function Home() {
     setVideoStatus('');
     setInterpretation('');
     setInterpretationTitle('');
+    setInterpretationInsights([]);
+    setPersonalAffirmation('');
     setIsInterpreting(true);
 
     const selectedTemplate = interpretationTemplates[
@@ -226,6 +459,9 @@ export default function Home() {
       const summary = formatDreamSummary(dreamText);
       setInterpretationTitle(selectedTemplate.title);
       setInterpretation(selectedTemplate.body(summary, focusKeyword));
+      setInterpretationInsights(interpretationAdvice[selectedTemplate.id] || []);
+      setPersonalAffirmation(focusPresets[selectedTemplate.id]?.affirmation || '');
+      setPersonalFocus(selectedTemplate.id);
       setIsInterpreting(false);
     }, 1200);
   };
@@ -263,6 +499,22 @@ export default function Home() {
     } catch (error) {
       setShareStatus('Paylaşım iptal edildi veya bir sorun oluştu.');
     }
+  };
+
+  const toggleService = (service) => {
+    setSelectedServices((prev) => {
+      if (prev.includes(service)) {
+        return prev.filter((item) => item !== service);
+      }
+      return [...prev, service];
+    });
+  };
+
+  const toggleChannel = (channel) => {
+    setNotificationChannels((prev) => ({
+      ...prev,
+      [channel]: !prev[channel],
+    }));
   };
 
   return (
@@ -361,6 +613,12 @@ export default function Home() {
               <li>• Fal tercihlerinize göre kişiselleştirilmiş öneriler</li>
               <li>• Saniyeler içinde paylaşılabilir hikâye formatları</li>
             </ul>
+            {personalAffirmation && (
+              <div className="mt-6 rounded-2xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 text-sm text-fuchsia-100">
+                <p className="font-semibold uppercase tracking-wide">Günün Afirmasyonu</p>
+                <p className="mt-2">{personalAffirmation}</p>
+              </div>
+            )}
           </div>
           <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-6">
             <h3 className="text-xl font-semibold text-fuchsia-200">
@@ -373,6 +631,16 @@ export default function Home() {
                 ? 'Semboller, duygular ve fal tercihleri harmanlanıyor...'
                 : interpretation || 'Rüyayı sesli veya yazılı anlatın ve “Rüyayı Yorumla” butonuna dokunun.'}
             </p>
+            {interpretationInsights.length > 0 && (
+              <ul className="mt-5 space-y-2 text-sm text-indigo-100">
+                {interpretationInsights.map((tip) => (
+                  <li key={tip} className="flex items-start gap-2">
+                    <span className="mt-1 inline-flex h-1.5 w-1.5 rounded-full bg-fuchsia-300" />
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 
@@ -398,6 +666,19 @@ export default function Home() {
               </button>
               {videoStatus && <p className="text-sm text-indigo-100">{videoStatus}</p>}
               {shareStatus && <p className="text-sm text-fuchsia-200">{shareStatus}</p>}
+              {recommendedVideoScenes.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">Önerilen Sahne Akışı</p>
+                  <ul className="mt-3 space-y-2 text-sm text-indigo-100">
+                    {recommendedVideoScenes.map((scene) => (
+                      <li key={scene} className="flex items-start gap-2">
+                        <span className="mt-1 inline-flex h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                        <span>{scene}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -415,6 +696,36 @@ export default function Home() {
                 </li>
               ))}
             </ul>
+            <div className="mt-6">
+              <p className="text-xs uppercase tracking-wide text-indigo-300">Koçluk odağını seç</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {interpretationTemplates.map((template) => {
+                  const isActive = personalFocus === template.id;
+                  return (
+                    <button
+                      key={template.id}
+                      className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                        isActive
+                          ? 'bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/40'
+                          : 'border border-white/30 text-indigo-100 hover:border-white hover:bg-white/10'
+                      }`}
+                      onClick={() => setPersonalFocus(template.id)}
+                    >
+                      {template.title}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-xs text-indigo-200">
+              <p className="font-semibold uppercase tracking-wide text-fuchsia-200">Seçili Fal Kombinasyonu</p>
+              <p className="mt-2 text-sm text-indigo-100">{selectedServiceSummary}</p>
+              <ul className="mt-3 space-y-1 text-[13px] text-indigo-200">
+                {selectedServices.map((service) => (
+                  <li key={service}>• {serviceHighlights[service] || 'Sezgisel içgörülerinizi takip edin.'}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
@@ -432,6 +743,16 @@ export default function Home() {
               >
                 <h3 className="text-xl font-semibold text-fuchsia-200">{service.title}</h3>
                 <p className="mt-3 text-sm text-indigo-100">{service.description}</p>
+                <button
+                  className={`mt-4 w-full rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                    selectedServices.includes(service.title)
+                      ? 'bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30'
+                      : 'border border-white/30 text-indigo-100 hover:border-white hover:bg-white/10'
+                  }`}
+                  onClick={() => toggleService(service.title)}
+                >
+                  {selectedServices.includes(service.title) ? 'Planımda' : 'Planıma Ekle'}
+                </button>
               </div>
             ))}
           </div>
@@ -450,8 +771,50 @@ export default function Home() {
               Kişiye Özel Hatırlatmalar
             </div>
           </div>
+          <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid flex-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-2 text-sm text-indigo-100">
+                <span className="text-xs uppercase tracking-wide text-indigo-300">Bildirim başlangıç saati</span>
+                <input
+                  type="time"
+                  value={notificationTime}
+                  onChange={(event) => setNotificationTime(event.target.value)}
+                  className="rounded-full border border-white/20 bg-slate-950/60 px-4 py-2 text-sm text-white outline-none focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30"
+                />
+              </label>
+              <div className="flex flex-col gap-2 text-sm text-indigo-100">
+                <span className="text-xs uppercase tracking-wide text-indigo-300">Bildirim kanalları</span>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(channelLabels).map((channel) => {
+                    const isActive = notificationChannels[channel];
+                    return (
+                      <button
+                        key={channel}
+                        className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                          isActive
+                            ? 'bg-emerald-500 text-slate-950'
+                            : 'border border-white/30 text-indigo-100 hover:border-white hover:bg-white/10'
+                        }`}
+                        onClick={() => toggleChannel(channel)}
+                      >
+                        {channelLabels[channel]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-indigo-100 lg:max-w-sm">
+              <p className="font-semibold uppercase tracking-wide text-emerald-200">Aktif hatırlatmalar</p>
+              <p className="mt-2 text-[13px] text-indigo-200">
+                {activeChannels.length > 0
+                  ? `${activeChannels.join(', ')} üzerinden günlük plan özetleri gönderilecek.`
+                  : 'Bildirim almak için en az bir kanal seçin.'}
+              </p>
+            </div>
+          </div>
           <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {defaultDailyPlan.map((item) => (
+            {personalizedPlan.map((item) => (
               <div key={item.title} className="rounded-3xl border border-white/10 bg-slate-950/40 p-6">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm font-semibold text-fuchsia-200">{item.time}</span>
