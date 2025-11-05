@@ -25,12 +25,12 @@ const fortuneServices = [
   {
     title: 'Kahve Falı',
     description:
-      'Geleneksel sembolleri yapay zekâ ile birleştirerek fincanınızdaki işaretlerin kişisel hikâyenize nasıl yansıdığını keşfedin.',
+      'Fincan fotoğrafınızı yükleyip yapay zekâ ile birleşen geleneksel sembollerin kişisel hikâyenize nasıl yansıdığını keşfedin.',
   },
   {
     title: 'Tarot Falı',
     description:
-      'Büyük Arkana enerjilerini gerçek zamanlı analiz ederek sorularınıza sezgisel ve yol gösterici cevaplar üretir.',
+      'DreamOracle destesi veya kendi kart açılımınızın fotoğrafı üzerinden Büyük Arkana enerjilerini analiz ederek sezgisel cevaplar üretir.',
   },
   {
     title: 'Yıldız Falı',
@@ -40,7 +40,7 @@ const fortuneServices = [
   {
     title: 'El Falı',
     description:
-      'Avuç içi çizgilerinizi dijital olarak tarayıp karakterinizi, ilişkilerinizi ve potansiyelinizi geleceğe taşıyan öneriler üretir.',
+      'Avuç içi fotoğrafınızı yükleyip çizgilerinizi dijital olarak analiz ederek karakterinizi ve potansiyelinizi geleceğe taşıyan öneriler üretir.',
   },
   {
     title: 'Astronomi Falı',
@@ -157,6 +157,21 @@ const planBlueprint = [
     fallbackTitle: 'Rüya günlüğü ve paylaşım',
     fallbackDescription:
       'Günün sonunda rüya günlüğünüze yeni deneyimleri ekleyin, dileyenler için videolu paylaşım hazırlayın.',
+  },
+];
+
+const tarotSources = [
+  {
+    id: 'deck',
+    title: 'DreamOracle Kozmik Destesi',
+    description:
+      'Platformun seçtiği kart kombinasyonlarıyla otomatik yorum üretin. Yapay zekâ kart arketiplerini rüya temalarınızla eşleştirir.',
+  },
+  {
+    id: 'upload',
+    title: 'Kendi Kart Açılımım',
+    description:
+      'Kart açılımınızın fotoğrafını yükleyerek kişisel enerji alanınızı analize dahil edin. DreamOracle sembolleri kendi görsellerinizle harmanlar.',
   },
 ];
 
@@ -326,6 +341,19 @@ export default function Home() {
     email: true,
     whatsapp: false,
   });
+  const [coffeeImage, setCoffeeImage] = useState(null);
+  const [coffeePreview, setCoffeePreview] = useState('');
+  const [palmImage, setPalmImage] = useState(null);
+  const [palmPreview, setPalmPreview] = useState('');
+  const [tarotMode, setTarotMode] = useState('deck');
+  const [tarotImage, setTarotImage] = useState(null);
+  const [tarotPreview, setTarotPreview] = useState('');
+
+  const revokePreview = (url) => {
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+  };
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -368,6 +396,24 @@ export default function Home() {
     [notificationChannels]
   );
 
+  const serviceStatuses = useMemo(
+    () => ({
+      'Kahve Falı': coffeePreview
+        ? `Fincan görseli yüklendi${coffeeImage?.name ? ` (${coffeeImage.name})` : ''}.`
+        : 'Fincan fotoğrafınızı ekleyerek tortu sembollerinin detaylı analizini açın.',
+      'El Falı': palmPreview
+        ? `El fotoğrafı yüklendi${palmImage?.name ? ` (${palmImage.name})` : ''}.`
+        : 'Avuç içinizi fotoğraflayıp çizgilerinizin yorumlanmasını sağlayın.',
+      'Tarot Falı':
+        tarotMode === 'upload'
+          ? tarotPreview
+            ? `Kart açılımı görseli yüklendi${tarotImage?.name ? ` (${tarotImage.name})` : ''}.`
+            : 'Kart açılımınızın fotoğrafını ekleyin ve yorumlara dahil edin.'
+          : 'DreamOracle destesi otomatik olarak kartlarınızı seçip yorumlar.',
+    }),
+    [coffeePreview, coffeeImage, palmPreview, palmImage, tarotMode, tarotPreview, tarotImage]
+  );
+
   const recommendedVideoScenes = useMemo(() => {
     if (!interpretation) {
       return [];
@@ -391,6 +437,26 @@ export default function Home() {
       }
     };
   }, [audioURL]);
+
+  useEffect(() => {
+    return () => {
+      revokePreview(coffeePreview);
+      revokePreview(palmPreview);
+      revokePreview(tarotPreview);
+    };
+  }, [coffeePreview, palmPreview, tarotPreview]);
+
+  useEffect(() => {
+    if (tarotMode !== 'upload') {
+      setTarotImage(null);
+      setTarotPreview((prev) => {
+        if (prev) {
+          revokePreview(prev);
+        }
+        return '';
+      });
+    }
+  }, [tarotMode]);
 
   const handleStartRecording = async () => {
     setRecordingError('');
@@ -440,6 +506,32 @@ export default function Home() {
     mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
     mediaRecorderRef.current = null;
     setIsRecording(false);
+  };
+
+  const handleImageUpload = (event, setFile, setPreview) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setFile(file);
+    setPreview((prev) => {
+      if (prev) {
+        revokePreview(prev);
+      }
+      return URL.createObjectURL(file);
+    });
+    event.target.value = '';
+  };
+
+  const clearImage = (setFile, setPreview) => {
+    setFile(null);
+    setPreview((prev) => {
+      if (prev) {
+        revokePreview(prev);
+      }
+      return '';
+    });
   };
 
   const handleInterpretation = () => {
@@ -522,9 +614,14 @@ export default function Home() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_rgba(2,6,23,0))]" />
         <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-24 pt-28 text-center md:px-12">
-          <span className="mx-auto inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.3em] text-fuchsia-200">
+          <a
+            href="https://dreamoracle.space"
+            target="_blank"
+            rel="noreferrer"
+            className="mx-auto inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.3em] text-fuchsia-200 transition hover:bg-white/20"
+          >
             DreamOracle.space Rüya & Fal Ekosistemi
-          </span>
+          </a>
           <h1 className="text-4xl font-bold leading-tight text-white md:text-6xl">
             Rüyalarınızı Sesli Anlatın, Yapay Zekâ ile Kozmik Yolculuğa Çıkın
           </h1>
@@ -598,6 +695,152 @@ export default function Home() {
             >
               Rüyayı Yorumla
             </button>
+          </div>
+        </section>
+
+        <section className="grid gap-8 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur lg:grid-cols-3">
+          <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-950/40 p-6">
+            <h3 className="text-xl font-semibold text-fuchsia-200">Kahve Falı Fincan Fotoğrafı</h3>
+            <p className="text-sm text-indigo-100">
+              Fincanınızı farklı açılardan fotoğraflayarak DreamOracle&apos;ın telve desenlerini analiz etmesine izin verin.
+            </p>
+            <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-fuchsia-400/40 bg-slate-950/40 p-4 text-center text-xs uppercase tracking-wide text-fuchsia-200 transition hover:border-fuchsia-300 hover:bg-fuchsia-500/5">
+              <span>{coffeePreview ? 'Yeni Fotoğraf Seç' : 'Fotoğraf Yükle'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => handleImageUpload(event, setCoffeeImage, setCoffeePreview)}
+              />
+            </label>
+            {coffeePreview ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <img
+                  src={coffeePreview}
+                  alt="Kahve fincanı önizlemesi"
+                  className="h-40 w-full rounded-xl object-cover"
+                />
+                <div className="flex items-center justify-between text-xs text-indigo-200">
+                  <span className="truncate">{coffeeImage?.name || 'Yüklenen görsel'}</span>
+                  <button
+                    type="button"
+                    className="font-semibold text-fuchsia-300 transition hover:text-fuchsia-100"
+                    onClick={() => clearImage(setCoffeeImage, setCoffeePreview)}
+                  >
+                    Kaldır
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-indigo-200">
+                Kremanın ve telve izlerinin net göründüğü bir fotoğraf seçerek ayrıntılı sembol çözümlemesi alın.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-950/40 p-6">
+            <h3 className="text-xl font-semibold text-fuchsia-200">El Falı İçin Avuç Fotoğrafı</h3>
+            <p className="text-sm text-indigo-100">
+              Avuç içinizi aydınlık bir ortamda çekerek çizgilerinizin yaşam koçluğu önerilerine dönüşmesini sağlayın.
+            </p>
+            <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-fuchsia-400/40 bg-slate-950/40 p-4 text-center text-xs uppercase tracking-wide text-fuchsia-200 transition hover:border-fuchsia-300 hover:bg-fuchsia-500/5">
+              <span>{palmPreview ? 'Yeni Fotoğraf Seç' : 'Fotoğraf Yükle'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => handleImageUpload(event, setPalmImage, setPalmPreview)}
+              />
+            </label>
+            {palmPreview ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <img src={palmPreview} alt="El falı avuç içi önizlemesi" className="h-40 w-full rounded-xl object-cover" />
+                <div className="flex items-center justify-between text-xs text-indigo-200">
+                  <span className="truncate">{palmImage?.name || 'Yüklenen görsel'}</span>
+                  <button
+                    type="button"
+                    className="font-semibold text-fuchsia-300 transition hover:text-fuchsia-100"
+                    onClick={() => clearImage(setPalmImage, setPalmPreview)}
+                  >
+                    Kaldır
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-indigo-200">
+                Her iki elinizi de yükleyerek karakter, ilişki ve kariyer çizgilerinizin derin yorumlarını alın.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-950/40 p-6">
+            <h3 className="text-xl font-semibold text-fuchsia-200">Tarot Kart Kaynağı</h3>
+            <p className="text-sm text-indigo-100">
+              DreamOracle destesi ile otomatik kart seçebilir ya da kendi açılım fotoğrafınızı yükleyebilirsiniz.
+            </p>
+            <div className="flex flex-col gap-3">
+              {tarotSources.map((option) => {
+                const isActive = tarotMode === option.id;
+                return (
+                  <div
+                    key={option.id}
+                    className={`rounded-2xl border p-3 transition ${
+                      isActive
+                        ? 'border-fuchsia-400/60 bg-fuchsia-500/10'
+                        : 'border-white/10 bg-slate-950/40 hover:border-fuchsia-300/40 hover:bg-fuchsia-500/5'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className={`w-full rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                        isActive
+                          ? 'bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30'
+                          : 'border border-white/30 text-indigo-100 hover:border-white hover:bg-white/10'
+                      }`}
+                      onClick={() => setTarotMode(option.id)}
+                    >
+                      {option.title}
+                    </button>
+                    <p className="mt-2 text-xs text-indigo-200">{option.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+            {tarotMode === 'upload' ? (
+              tarotPreview ? (
+                <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                  <img
+                    src={tarotPreview}
+                    alt="Tarot kartı açılımı önizlemesi"
+                    className="h-40 w-full rounded-xl object-cover"
+                  />
+                  <div className="flex items-center justify-between text-xs text-indigo-200">
+                    <span className="truncate">{tarotImage?.name || 'Yüklenen görsel'}</span>
+                    <button
+                      type="button"
+                      className="font-semibold text-fuchsia-300 transition hover:text-fuchsia-100"
+                      onClick={() => clearImage(setTarotImage, setTarotPreview)}
+                    >
+                      Kaldır
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-fuchsia-400/40 bg-slate-950/40 p-4 text-center text-xs uppercase tracking-wide text-fuchsia-200 transition hover:border-fuchsia-300 hover:bg-fuchsia-500/5">
+                  <span>Kart Açılımı Fotoğrafı Yükle</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => handleImageUpload(event, setTarotImage, setTarotPreview)}
+                  />
+                </label>
+              )
+            ) : (
+              <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 p-4 text-xs text-emerald-100">
+                DreamOracle kart destesi aktif. Platform kart arketiplerini rüya temasına göre seçip yorumunuza ekler.
+              </div>
+            )}
           </div>
         </section>
 
@@ -722,7 +965,12 @@ export default function Home() {
               <p className="mt-2 text-sm text-indigo-100">{selectedServiceSummary}</p>
               <ul className="mt-3 space-y-1 text-[13px] text-indigo-200">
                 {selectedServices.map((service) => (
-                  <li key={service}>• {serviceHighlights[service] || 'Sezgisel içgörülerinizi takip edin.'}</li>
+                  <li key={service} className="space-y-1">
+                    <span>• {serviceHighlights[service] || 'Sezgisel içgörülerinizi takip edin.'}</span>
+                    {serviceStatuses[service] && (
+                      <span className="block pl-4 text-[12px] text-indigo-300">{serviceStatuses[service]}</span>
+                    )}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -743,6 +991,9 @@ export default function Home() {
               >
                 <h3 className="text-xl font-semibold text-fuchsia-200">{service.title}</h3>
                 <p className="mt-3 text-sm text-indigo-100">{service.description}</p>
+                {serviceStatuses[service.title] && (
+                  <p className="mt-3 text-xs text-indigo-300">{serviceStatuses[service.title]}</p>
+                )}
                 <button
                   className={`mt-4 w-full rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
                     selectedServices.includes(service.title)
@@ -862,6 +1113,14 @@ export default function Home() {
                 className="rounded-full bg-fuchsia-500 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-fuchsia-400"
               >
                 Destek ile İletişime Geç
+              </a>
+              <a
+                href="https://dreamoracle.space"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:border-white hover:bg-white/10"
+              >
+                dreamoracle.space
               </a>
               <span className="text-xs text-indigo-200">7/24 canlı koçluk ve fal danışmanlığı hattı</span>
             </div>
