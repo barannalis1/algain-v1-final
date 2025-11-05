@@ -523,7 +523,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_rgba(2,6,23,0))]" />
         <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-24 pt-28 text-center md:px-12">
           <span className="mx-auto inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.3em] text-fuchsia-200">
-            Algain Rüya & Fal Ekosistemi
+            DreamOracle.space Rüya & Fal Ekosistemi
           </span>
           <h1 className="text-4xl font-bold leading-tight text-white md:text-6xl">
             Rüyalarınızı Sesli Anlatın, Yapay Zekâ ile Kozmik Yolculuğa Çıkın
@@ -852,13 +852,13 @@ export default function Home() {
             <div>
               <h2 className="text-3xl font-semibold text-white">Haydi Rüya Yolculuğunu Başlatalım</h2>
               <p className="mt-3 text-sm text-indigo-100">
-                Rüyalarınızı, fallarınızı ve günlük ritüellerinizi tek çatı altında birleştiren Algain ile sezgilerinizi
+                Rüyalarınızı, fallarınızı ve günlük ritüellerinizi tek çatı altında birleştiren DreamOracle ile sezgilerinizi
                 güçlendirin. Topluluğumuza katılın, kozmik rehberliğinizi bugünden yapılandırın.
               </p>
             </div>
             <div className="flex flex-col items-start gap-3">
               <a
-                href="mailto:destek@algain.com"
+                href="mailto:destek@dreamoracle.space"
                 className="rounded-full bg-fuchsia-500 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-fuchsia-400"
               >
                 Destek ile İletişime Geç
@@ -871,7 +871,7 @@ export default function Home() {
 
       <footer className="border-t border-white/10 bg-slate-950/60 py-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 text-sm text-indigo-200 md:flex-row md:items-center md:justify-between md:px-12">
-          <span>© {new Date().getFullYear()} Algain. Tüm hakları saklıdır.</span>
+          <span>© {new Date().getFullYear()} DreamOracle. Tüm hakları saklıdır.</span>
           <div className="flex flex-wrap items-center gap-4 text-xs uppercase tracking-wide text-indigo-300">
             <span>Gizlilik</span>
             <span>Koşullar</span>
