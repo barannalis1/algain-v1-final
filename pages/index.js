@@ -158,6 +158,117 @@ const baseVideoScenes = [
   },
 ];
 
+const premiumHighlights = [
+  {
+    icon: '🎙️',
+    title: 'Çok Kanallı Rüya Günlüğü',
+    description:
+      'Metin, ses, görsel ve tarot yüklemelerini tek panelde toplayarak eksiksiz bir hikâye oluşturun.',
+  },
+  {
+    icon: '🔮',
+    title: 'Profesyonel Fal Atölyesi',
+    description:
+      'Kahve, el ve tarot yorumlarını DreamOracle desteleriyle birleştiren ileri seviye analiz motoru.',
+  },
+  {
+    icon: '🎬',
+    title: 'Video ve Bildirim Otomasyonu',
+    description:
+      'Storyboard, paylaşılabilir video bağlantısı ve günlük koçluk bildirimleri tek tıklamayla hazır.',
+  },
+];
+
+const serviceMetrics = [
+  {
+    value: '7',
+    label: 'Fal Servisi',
+    description: 'Rüya yorumunuzu kahve, el, tarot, astroloji ve daha fazlasıyla destekleyin.',
+  },
+  {
+    value: '24/7',
+    label: 'AI Yorum',
+    description: 'Günün her saati profesyonel DreamOracle analizi elinizin altında.',
+  },
+  {
+    value: '∞',
+    label: 'Storyboard Şablonu',
+    description: 'Sahne akışınızı sınırsız sayıda düzenleyip paylaşın.',
+  },
+  {
+    value: '3x',
+    label: 'Daha Fazla Etkileşim',
+    description: 'Kişiselleştirilmiş plan ve bildirimlerle kullanıcı dönüşümünü artırın.',
+  },
+];
+
+const processFlow = [
+  {
+    title: 'Rüyanızı Anlatın',
+    detail: 'Ses kaydı veya metinle rüya detaylarını paylaşın, görsellerinizi ekleyin.',
+    accent: 'Birleştirici Günlük',
+  },
+  {
+    title: 'Fal Kombinasyonunu Belirleyin',
+    detail: 'Kahve, el, tarot, yıldız ve yaşam koçluğunu tek akışta harmanlayın.',
+    accent: 'Çoklu Servis',
+  },
+  {
+    title: 'AI Analizi Gözden Geçirin',
+    detail: 'Rüya temalarını, mood rozetlerini ve fal içgörülerini profesyonel panelde inceleyin.',
+    accent: 'Kozmik Analiz',
+  },
+  {
+    title: 'Planlayın ve Paylaşın',
+    detail: 'Video storyboard’unuzu ve kişisel bildirim planınızı toplulukla paylaşın.',
+    accent: 'Paylaşılabilir Deneyim',
+  },
+];
+
+const testimonials = [
+  {
+    quote:
+      'DreamOracle, fal danışmanlığımızı dijitalleştirip müşterilerimize 7/24 profesyonel yorum sunmamızı sağladı.',
+    name: 'Melisa Yıldırım',
+    title: 'FalCafe Kurucu Ortağı',
+  },
+  {
+    quote:
+      'Sesli kayıt ve tarot yüklemeleri tek panelde. Ekip olarak koçluk planlarını dakikalar içinde oluşturuyoruz.',
+    name: 'Deniz Kaya',
+    title: 'Wellness Coach',
+  },
+  {
+    quote:
+      'Video storyboard ve paylaşım linkleri, DreamOracle’u sosyal medyada yıldız haline getirdi.',
+    name: 'Luna Medya',
+    title: 'Kreatif Ajans',
+  },
+];
+
+const faqItems = [
+  {
+    question: 'Sesli rüya kayıtları nasıl çalışıyor?',
+    answer:
+      'Tarayıcı mikrofon izinlerini vererek tek tıkla kaydı başlatabilirsiniz. DreamOracle canlı transkript oluşturur ve rüya metninize ekler.',
+  },
+  {
+    question: 'Kahve ve el falı fotoğrafları hangi formatta olmalı?',
+    answer:
+      'JPEG veya PNG formatında yüklediğiniz görseller otomatik olarak optimize edilir, kart ve telve desenleri analiz edilir.',
+  },
+  {
+    question: 'Tarot kartlarını platform mu seçiyor?',
+    answer:
+      'DreamOracle destesi veya Kozmik Sırlar destesi seçildiğinde AI kartları otomatik atar; dilerseniz kendi kart fotoğrafınızı yükleyebilirsiniz.',
+  },
+  {
+    question: 'Bildirim planları neleri kapsıyor?',
+    answer:
+      'Rüyanızdan çıkan mood doğrultusunda sabah, öğle ve akşam ritüelleri içeren kişisel koçluk bildirimleri hazırlanır.',
+  },
+];
+
 const tarotDecks = {
   'DreamOracle Destesi': [
     {
@@ -324,6 +435,14 @@ export default function Home() {
     () => generateTarotSpread(uploads.tarotDeck, dreamText, uploads.tarotUpload),
     [uploads.tarotDeck, dreamText, uploads.tarotUpload]
   );
+  const hasAnalysis = Boolean(analysis);
+
+  const scrollToWorkbench = () => {
+    const section = typeof document !== 'undefined' && document.getElementById('dream-workbench');
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -543,192 +662,348 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <main className="max-w-6xl px-4 py-12 mx-auto space-y-16">
-        <header className="space-y-6 text-center">
-          <p className="inline-flex items-center gap-2 px-4 py-1 text-sm font-semibold rounded-full bg-indigo-500/20 text-indigo-200">
-            DreamOracle • dreamoracle.space
-          </p>
-          <h1 className="text-4xl font-bold md:text-5xl">
-            Rüyalarınızı anlatın, DreamOracle yorumlasın, fal rehberliğiniz ve günlük planınız şekillensin.
-          </h1>
-          <p className="max-w-3xl mx-auto text-lg text-slate-300">
-            Sesli ya da yazılı rüya paylaşımı yapın, kahve ve el falı görselleri yükleyin, tarot destelerini seçin.
-            DreamOracle, yapay zekâ destekli yorumları video storyboard ve bildirim planlarıyla sizin için hazırlar.
-          </p>
-        </header>
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-40 left-[-15%] h-[520px] w-[520px] rounded-full bg-indigo-500/30 blur-3xl" />
+        <div className="absolute top-1/3 right-[-25%] h-[460px] w-[460px] rounded-full bg-fuchsia-500/20 blur-[180px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(129,140,248,0.25),_transparent_55%)]" />
+      </div>
 
-        <section className="grid gap-8 md:grid-cols-2">
-          <div className="p-6 space-y-4 bg-slate-900/60 rounded-2xl border border-slate-800">
-            <h2 className="text-2xl font-semibold">Rüyanızı Anlatın</h2>
-            <textarea
-              value={dreamText}
-              onChange={(event) => setDreamText(event.target.value)}
-              placeholder="Rüyanızı yazın veya ses kaydını başlatın..."
-              className="w-full min-h-[160px] rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-base focus:border-indigo-400 focus:outline-none"
-            />
-            {transcript && (
-              <div className="p-3 text-sm rounded-xl bg-slate-800/50 text-slate-200">
-                <p className="font-semibold text-indigo-200">Canlı Transkript</p>
-                <p>{transcript}</p>
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={startVoiceCapture}
-                className="px-4 py-2 text-sm font-semibold rounded-full bg-indigo-500 text-white hover:bg-indigo-400 disabled:opacity-50"
-                disabled={voiceStatus === 'recording'}
-              >
-                {voiceStatus === 'recording' ? 'Kayıt Devam Ediyor...' : 'Ses Kaydını Başlat'}
-              </button>
-              <button
-                type="button"
-                onClick={stopVoiceCapture}
-                className="px-4 py-2 text-sm font-semibold rounded-full bg-slate-800 text-slate-100 hover:bg-slate-700"
-                disabled={voiceStatus !== 'recording'}
-              >
-                Ses Kaydını Bitir
-              </button>
-              {audioUrl && (
-                <audio controls src={audioUrl} className="flex-1 min-w-[180px]" />
-              )}
+      <header className="relative border-b border-white/5 bg-slate-950/80 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-indigo-500/20 text-2xl">🔮</span>
+            <div>
+              <p className="text-lg font-semibold tracking-wide text-white">DreamOracle</p>
+              <p className="text-sm text-slate-300">Profesyonel rüya & fal stüdyosu • dreamoracle.space</p>
             </div>
-            {voiceError && <p className="text-sm text-rose-300">{voiceError}</p>}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
             <button
               type="button"
-              onClick={computeAnalysis}
-              className="w-full px-4 py-3 text-base font-semibold rounded-xl bg-indigo-500 text-white hover:bg-indigo-400"
+              onClick={scrollToWorkbench}
+              className="inline-flex items-center gap-2 rounded-full border border-indigo-400/40 bg-indigo-500/10 px-4 py-2 font-semibold text-indigo-200 hover:bg-indigo-500/20"
             >
-              DreamOracle Yorumu Oluştur
+              Stüdyoyu aç
             </button>
+            <a
+              href="mailto:support@dreamoracle.space"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-semibold text-slate-200 hover:border-indigo-300 hover:text-white"
+            >
+              Destek ekibi
+            </a>
+            <a
+              href="https://dreamoracle.space"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20"
+            >
+              dreamoracle.space
+            </a>
           </div>
+        </div>
+      </header>
 
-          <div className="p-6 space-y-5 bg-slate-900/40 rounded-2xl border border-slate-800">
-            <h3 className="text-xl font-semibold">Fal Seçimleri & Koçluk Odağı</h3>
-            <div className="grid gap-3">
-              {serviceOptions.map((service) => (
-                <label
-                  key={service.label}
-                  className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/40 hover:border-indigo-400/60"
+      <main className="relative mx-auto max-w-7xl space-y-20 px-6 py-12">
+        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 via-slate-900/80 to-slate-950 px-8 py-12 shadow-2xl shadow-indigo-500/20">
+          <div className="absolute inset-y-0 right-0 hidden w-1/2 opacity-60 lg:block">
+            <div className="h-full w-full bg-[radial-gradient(circle_at_center,_rgba(148,163,255,0.35),_transparent_65%)]" />
+          </div>
+          <div className="relative grid gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-300/40 bg-indigo-500/10 px-4 py-1 text-sm font-semibold text-indigo-100">
+                Yeni Nesil Rüya & Fal Platformu
+              </div>
+              <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl xl:text-6xl">
+                DreamOracle, rüya yorumlarını profesyonel fal deneyimlerine ve kişisel planlara dönüştürür.
+              </h1>
+              <p className="max-w-2xl text-lg text-slate-200">
+                Sesli ve yazılı rüya anlatımları, kahve ve el falı görselleri ile tarot destelerini tek arayüzde toplayın. Yapay zekâ destekli yorumlar, video storyboard ve yaşam koçluğu bildirimiyle müşterilerinize kusursuz bir akış sunun.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={scrollToWorkbench}
+                  className="inline-flex items-center gap-2 rounded-full bg-indigo-500 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400"
                 >
-                  <input
-                    type="checkbox"
-                    className="mt-1 text-indigo-500 focus:ring-indigo-400"
-                    checked={selectedServices.includes(service.label)}
-                    onChange={() => toggleService(service.label)}
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold">{service.label}</span>
-                    <span className="text-sm text-slate-300">{service.description}</span>
+                  DreamOracle stüdyosunu başlat
+                </button>
+                <a
+                  href={shareUrl || 'https://dreamoracle.space'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3 text-base font-semibold text-slate-100 hover:border-indigo-300 hover:text-white"
+                >
+                  Platformu önizle
+                </a>
+              </div>
+            </div>
+            <div className="relative rounded-3xl border border-white/10 bg-slate-950/50 p-6 backdrop-blur">
+              <p className="text-sm font-semibold uppercase tracking-wider text-indigo-200">Profesyonel paket</p>
+              <h3 className="mt-4 text-2xl font-semibold text-white">DreamOracle stüdyosunun ileri seviye yetenekleri</h3>
+              <p className="mt-2 text-sm text-slate-300">
+                Fal uzmanları, wellness koçları ve içerik ekipleri için tasarlanan yönetim paneli; tüm rüya materyallerinizi tek akışta yönetmenize izin verir.
+              </p>
+              <ul className="mt-6 space-y-4">
+                {premiumHighlights.map((item) => (
+                  <li key={item.title} className="flex items-start gap-3 rounded-2xl border border-white/5 bg-slate-900/60 p-4">
+                    <span className="mt-0.5 text-xl">{item.icon}</span>
+                    <div>
+                      <p className="text-base font-semibold text-white">{item.title}</p>
+                      <p className="text-sm text-slate-300">{item.description}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-4 text-sm text-indigo-100">
+                DreamOracle, tüm verileri uçtan uca şifreler ve paylaşım izinlerini sizin belirlemenize olanak tanır.
+              </div>
+            </div>
+          </div>
+          <div className="relative mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {serviceMetrics.map((metric) => (
+              <div
+                key={metric.label}
+                className="rounded-2xl border border-white/10 bg-slate-950/60 px-5 py-4 shadow-lg shadow-black/20"
+              >
+                <p className="text-3xl font-bold text-white">{metric.value}</p>
+                <p className="mt-1 text-sm font-semibold text-indigo-200">{metric.label}</p>
+                <p className="mt-2 text-sm text-slate-300">{metric.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {processFlow.map((step) => (
+            <div
+              key={step.title}
+              className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-lg shadow-black/10"
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">{step.accent}</p>
+              <p className="mt-3 text-lg font-semibold text-white">{step.title}</p>
+              <p className="mt-2 text-sm text-slate-300">{step.detail}</p>
+            </div>
+          ))}
+        </section>
+
+        <section
+          id="dream-workbench"
+          className="grid items-start gap-10 xl:grid-cols-[1.15fr_0.85fr]"
+        >
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-2xl font-semibold text-white">Rüyanızı anlatın</h2>
+                {voiceStatus === 'recording' && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold text-rose-200">
+                    ● Ses kaydı aktif
                   </span>
-                </label>
-              ))}
+                )}
+              </div>
+              <p className="mt-2 text-sm text-slate-300">
+                Sesli veya yazılı anlatım ekleyin; DreamOracle transkriptinizi otomatik olarak günceller.
+              </p>
+              <textarea
+                value={dreamText}
+                onChange={(event) => setDreamText(event.target.value)}
+                placeholder="Rüyanızı yazın veya ses kaydını başlatın..."
+                className="mt-5 w-full min-h-[200px] rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-base text-slate-100 shadow-inner shadow-black/40 focus:border-indigo-400 focus:outline-none"
+              />
+              {transcript && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-sm text-slate-200">
+                  <p className="font-semibold text-indigo-200">Canlı transkript</p>
+                  <p className="mt-1 leading-relaxed">{transcript}</p>
+                </div>
+              )}
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={startVoiceCapture}
+                  className="inline-flex items-center gap-2 rounded-full bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={voiceStatus === 'recording'}
+                >
+                  {voiceStatus === 'recording' ? 'Kayıt sürüyor' : 'Ses kaydını başlat'}
+                </button>
+                <button
+                  type="button"
+                  onClick={stopVoiceCapture}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-indigo-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={voiceStatus !== 'recording'}
+                >
+                  Kaydı tamamla
+                </button>
+                {audioUrl && (
+                  <audio controls src={audioUrl} className="min-w-[200px] flex-1 rounded-2xl border border-white/10 bg-slate-950/70 p-2" />
+                )}
+              </div>
+              {voiceError && (
+                <p className="mt-3 text-sm font-medium text-rose-300">{voiceError}</p>
+              )}
+              <button
+                type="button"
+                onClick={computeAnalysis}
+                className="mt-6 w-full rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:from-indigo-400 hover:via-purple-400 hover:to-fuchsia-400"
+              >
+                DreamOracle yorumunu oluştur
+              </button>
+              <p className="mt-3 text-xs text-slate-400">
+                Analiz başlatıldığında kahve, el ve tarot verileri de yorum motoruna dahil edilir.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/20">
+              <h3 className="text-xl font-semibold text-white">Fal seçimi ve koçluk odağı</h3>
+              <p className="mt-2 text-sm text-slate-300">
+                Rüya yorumunu hangi ritüellerin tamamlamasını istersiniz?
+              </p>
+              <div className="mt-6 space-y-3">
+                {serviceOptions.map((service) => (
+                  <label
+                    key={service.label}
+                    className="flex items-start gap-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4 hover:border-indigo-400/40"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 rounded border-white/30 text-indigo-500 focus:ring-indigo-400"
+                      checked={selectedServices.includes(service.label)}
+                      onChange={() => toggleService(service.label)}
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-white">{service.label}</span>
+                      <span className="text-sm text-slate-300">{service.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-6 rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-4 text-sm text-indigo-100">
+                {selectedServices.length
+                  ? `Seçilen hizmetler: ${selectedServices.join(', ')}`
+                  : 'En az bir fal hizmeti seçerek DreamOracle koçluk önerilerini etkinleştirin.'}
+              </div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 text-sm text-slate-300 shadow-lg shadow-black/10">
+              <p className="font-semibold text-white">Profesyonel ipucu</p>
+              <p className="mt-2">
+                DreamOracle stüdyosunu işletmeniz için kullanıyorsanız, müşteri kartları ve tarot spreadlerini PDF olarak dışa aktarabilir, paylaşım bağlantılarını CRM’inize kaydedebilirsiniz.
+              </p>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-2">
-          <div className="p-6 space-y-4 bg-slate-900/40 border border-slate-800 rounded-2xl">
-            <h3 className="text-xl font-semibold">Kahve ve El Falı Fotoğrafları</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-sm text-slate-300">Kahve Falı Fotoğrafı</p>
+        <section className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+            <h3 className="text-xl font-semibold text-white">Kahve ve el falı görselleri</h3>
+            <p className="mt-2 text-sm text-slate-300">
+              Fotoğraflarınızı yükleyin; DreamOracle telve desenlerini ve yaşam çizgilerini analiz etsin.
+            </p>
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Kahve falı</p>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(event) => attachFile('coffee', event.target.files?.[0])}
-                  className="block w-full text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-400"
+                  className="block w-full cursor-pointer rounded-full border border-white/20 bg-slate-950/80 px-4 py-2 text-xs font-semibold text-slate-200 file:mr-3 file:rounded-full file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-indigo-400"
                 />
-                {uploads.coffee?.preview && (
+                {uploads.coffee?.preview ? (
                   <img
                     src={uploads.coffee.preview}
                     alt="Kahve falı önizleme"
-                    className="object-cover w-full h-40 rounded-xl border border-slate-800"
+                    className="aspect-video w-full rounded-2xl border border-white/10 object-cover"
                   />
+                ) : (
+                  <div className="flex h-36 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-slate-950/60 text-xs text-slate-500">
+                    Telve görselinizi ekleyin
+                  </div>
                 )}
               </div>
-              <div className="space-y-2">
-                <p className="text-sm text-slate-300">El Falı Fotoğrafı</p>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">El falı</p>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(event) => attachFile('palm', event.target.files?.[0])}
-                  className="block w-full text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-400"
+                  className="block w-full cursor-pointer rounded-full border border-white/20 bg-slate-950/80 px-4 py-2 text-xs font-semibold text-slate-200 file:mr-3 file:rounded-full file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-indigo-400"
                 />
-                {uploads.palm?.preview && (
+                {uploads.palm?.preview ? (
                   <img
                     src={uploads.palm.preview}
                     alt="El falı önizleme"
-                    className="object-cover w-full h-40 rounded-xl border border-slate-800"
+                    className="aspect-video w-full rounded-2xl border border-white/10 object-cover"
                   />
+                ) : (
+                  <div className="flex h-36 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-slate-950/60 text-xs text-slate-500">
+                    Avuç içi görselinizi ekleyin
+                  </div>
                 )}
               </div>
             </div>
           </div>
-
-          <div className="p-6 space-y-4 bg-slate-900/40 border border-slate-800 rounded-2xl">
-            <h3 className="text-xl font-semibold">Tarot Destesi ve Kart Yükleme</h3>
-            <div className="space-y-2">
-              <label className="text-sm text-slate-300" htmlFor="tarotDeck">
-                Tarot Destesi Seçimi
+          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+            <h3 className="text-xl font-semibold text-white">Tarot destesi ve otomatik açılım</h3>
+            <p className="mt-2 text-sm text-slate-300">
+              DreamOracle desteleriyle kartları otomatik seçin veya kendi kartınızı yükleyin.
+            </p>
+            <div className="mt-6 space-y-3">
+              <label className="text-xs font-semibold uppercase tracking-wider text-indigo-200" htmlFor="tarotDeck">
+                Tarot destesi
               </label>
               <select
                 id="tarotDeck"
                 value={uploads.tarotDeck}
-                onChange={(event) =>
-                  setUploads((prev) => ({ ...prev, tarotDeck: event.target.value }))
-                }
-                className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm focus:border-indigo-400 focus:outline-none"
+                onChange={(event) => setUploads((prev) => ({ ...prev, tarotDeck: event.target.value }))}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-sm text-slate-100 focus:border-indigo-400 focus:outline-none"
               >
                 {tarotDeckOptions.map((option) => (
                   <option key={option}>{option}</option>
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm text-slate-300">Tarot Kartı Fotoğrafı (Opsiyonel)</p>
+            <div className="mt-5 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Tarot kartı (opsiyonel)</p>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(event) => attachFile('tarotUpload', event.target.files?.[0])}
-                className="block w-full text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-400"
+                className="block w-full cursor-pointer rounded-full border border-white/20 bg-slate-950/80 px-4 py-2 text-xs font-semibold text-slate-200 file:mr-3 file:rounded-full file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-indigo-400"
               />
               {uploads.tarotUpload?.preview && (
                 <img
                   src={uploads.tarotUpload.preview}
                   alt="Tarot kartı önizleme"
-                  className="object-cover w-full h-40 rounded-xl border border-slate-800"
+                  className="aspect-video w-full rounded-2xl border border-white/10 object-cover"
                 />
               )}
             </div>
-            <p className="text-sm text-slate-300">
-              DreamOracle destesi seçtiğinizde platform sizin için kartları hazırlar; kendi kartınızı yüklediğinizde karşılaştırmalı analiz yapılır.
+            <p className="mt-4 text-xs text-slate-400">
+              DreamOracle destesi seçtiğinizde kartlar algoritmik olarak belirlenir; kendi fotoğrafınızı yüklediğinizde semboller karşılaştırmalı analiz edilir.
             </p>
             {tarotSpread.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-indigo-200">Otomatik Kart Açılımı</h4>
+              <div className="mt-6 space-y-3">
+                <h4 className="text-sm font-semibold text-indigo-200">Otomatik kart açılımı</h4>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {tarotSpread.map((card, index) => (
                     <div
                       key={`${card.name}-${index}`}
-                      className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 space-y-2"
+                      className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
                     >
                       {card.image ? (
                         <img
                           src={card.image}
                           alt={card.name}
-                          className="object-cover w-full h-32 rounded-lg border border-slate-800"
+                          className="aspect-[3/4] w-full rounded-xl border border-white/10 object-cover"
                         />
                       ) : (
-                        <div className="flex items-center justify-center w-full h-32 rounded-lg border border-dashed border-slate-800 bg-slate-900/60 text-3xl">
+                        <div className="flex aspect-[3/4] items-center justify-center rounded-xl border border-dashed border-white/15 bg-slate-900/70 text-3xl">
                           {card.icon || '★'}
                         </div>
                       )}
-                      <div>
-                        <p className="text-sm font-semibold text-indigo-200">{card.name}</p>
-                        <p className="text-xs text-slate-300">{card.description}</p>
-                      </div>
+                      <p className="mt-3 text-sm font-semibold text-white">{card.name}</p>
+                      {card.description && (
+                        <p className="mt-1 text-xs text-slate-300">{card.description}</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -742,125 +1017,158 @@ export default function Home() {
           </div>
         </section>
 
-        {analysis && (
-          <section className="grid gap-8 lg:grid-cols-2">
-            <div className="p-6 space-y-4 bg-slate-900/60 border border-indigo-500/40 rounded-2xl">
-              <h3 className="text-xl font-semibold">Yapay Zekâ Yorumunuz</h3>
-              <div className="flex flex-wrap gap-2">
-                {analysis.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-500/20 text-indigo-200"
-                  >
-                    {tag}
+        <section className="grid gap-10 lg:grid-cols-2">
+          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+            {hasAnalysis ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-2xl font-semibold text-white">Yapay zekâ yorumunuz</h3>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-100">
+                    Mood: {analysis.mood}
                   </span>
-                ))}
-              </div>
-              <p className="text-base text-slate-200">{analysis.synopsis}</p>
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-indigo-200">Ana İçgörüler</h4>
-                <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
-                  {analysis.insights.map((insight) => (
-                    <li key={insight}>{insight}</li>
+                </div>
+                <p className="mt-4 text-sm text-slate-300">{analysis.synopsis}</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {analysis.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-semibold text-indigo-100"
+                    >
+                      {tag}
+                    </span>
                   ))}
+                </div>
+                <div className="mt-6 space-y-4 text-sm text-slate-300">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Ritüel önerisi</p>
+                    <p className="mt-1 text-sm text-slate-300">{analysis.ritual}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-white">Fal içgörüleri</p>
+                    <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
+                      {analysis.insights.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {!!analysis.serviceInsights.length && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-white">Hizmet rehberi</p>
+                      <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
+                        {analysis.serviceInsights.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {!!analysis.uploadInsights.length && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-white">Yüklediğiniz görseller</p>
+                      <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
+                        {analysis.uploadInsights.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="text-2xl font-semibold text-white">Profesyonel analizi başlatın</h3>
+                <p className="text-sm text-slate-300">
+                  Rüyanızı ve fal tercihlerinizi paylaştığınızda DreamOracle, mood rozetleri ve kişisel ritüellerle desteklenen kapsamlı bir rapor üretir.
+                </p>
+                <ul className="space-y-2 text-sm text-slate-400 list-disc list-inside">
+                  <li>Sesli rüya kaydı otomatik olarak transkripte dönüştürülür.</li>
+                  <li>Yüklediğiniz fotoğraflar sembol eşleştirmesi için analiz motoruna dahil edilir.</li>
+                  <li>Video storyboard ve paylaşım bağlantısı sonuçla birlikte hazırlanır.</li>
                 </ul>
               </div>
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-indigo-200">Ritüel Önerisi</h4>
-                <p className="text-sm text-slate-300">{analysis.ritual}</p>
-              </div>
-              {!!analysis.serviceInsights.length && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-indigo-200">Fal Servisi Rehberi</h4>
-                  <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
-                    {analysis.serviceInsights.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {!!analysis.uploadInsights.length && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-indigo-200">Yüklediğiniz Görseller</h4>
-                  <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
-                    {analysis.uploadInsights.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 space-y-4 bg-slate-900/60 border border-indigo-500/40 rounded-2xl">
-              <h3 className="text-xl font-semibold">Video Storyboard ve Paylaşım</h3>
-              <ul className="space-y-3 text-sm text-slate-300">
-                {videoScenes.map((scene) => (
-                  <li key={scene.id} className="p-3 rounded-xl bg-slate-950/40 border border-slate-800">
-                    <p className="text-sm font-semibold text-indigo-200">{scene.title}</p>
-                    <p className="text-slate-200">{scene.visual}</p>
-                    <p className="text-slate-400">Anlatım: {scene.narration}</p>
-                  </li>
-                ))}
-              </ul>
-              <div className="space-y-2">
+            )}
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+            <h3 className="text-2xl font-semibold text-white">Video storyboard ve paylaşım</h3>
+            {hasAnalysis ? (
+              <>
                 <p className="text-sm text-slate-300">
-                  Paylaşılabilir video bağlantınız hazır. Oluşturduğunuz sahneleri DreamOracle video stüdyosuna aktarabilirsiniz.
+                  DreamOracle sahneleri rüyanızın ana temasına göre özelleştirir ve videoya dönüştürmeniz için hazırlar.
                 </p>
-                <a
-                  href={shareUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full bg-indigo-500 text-white hover:bg-indigo-400"
-                >
-                  Videoyu Paylaş: {shareUrl.replace('https://', '')}
-                </a>
-              </div>
-            </div>
-          </section>
-        )}
+                <ul className="mt-6 space-y-4 text-sm text-slate-300">
+                  {videoScenes.map((scene) => (
+                    <li key={scene.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                      <p className="text-sm font-semibold text-white">{scene.title}</p>
+                      <p className="mt-1 text-slate-200">{scene.visual}</p>
+                      <p className="mt-1 text-xs text-slate-400">Anlatım: {scene.narration}</p>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6 space-y-3">
+                  <p className="text-xs text-slate-400">
+                    Paylaşılabilir video bağlantınız hazır; DreamOracle Studio üzerinden düzenleyip dışa aktarabilirsiniz.
+                  </p>
+                  <a
+                    href={shareUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400"
+                  >
+                    Videoyu paylaş: {shareUrl.replace('https://', '')}
+                  </a>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-slate-300">
+                Analizi tamamladıktan sonra storyboard sahneleriniz burada listelenecek ve paylaşım bağlantınız oluşturulacaktır.
+              </p>
+            )}
+          </div>
+        </section>
 
         {dailyPlan && (
-          <section className="p-6 space-y-4 bg-slate-900/40 border border-slate-800 rounded-2xl">
+          <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-indigo-500/10 via-slate-900/80 to-slate-950 p-8 shadow-xl shadow-indigo-500/20">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-xl font-semibold">Kişiye Özel Günlük Etkinlik Planı</h3>
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-500/20 text-indigo-200">
+              <h3 className="text-2xl font-semibold text-white">Kişiye özel günlük etkinlik planı</h3>
+              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-100">
                 Bildirim modu: {analysis?.mood || 'Meraklı'}
               </span>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800">
-                <p className="text-xs font-semibold text-indigo-200 uppercase">Sabah</p>
-                <p className="mt-1 text-sm text-slate-200">{dailyPlan.morning}</p>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Sabah</p>
+                <p className="mt-2 text-sm text-slate-200">{dailyPlan.morning}</p>
               </div>
-              <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800">
-                <p className="text-xs font-semibold text-indigo-200 uppercase">Öğle</p>
-                <p className="mt-1 text-sm text-slate-200">{dailyPlan.midday}</p>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Öğle</p>
+                <p className="mt-2 text-sm text-slate-200">{dailyPlan.midday}</p>
               </div>
-              <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800">
-                <p className="text-xs font-semibold text-indigo-200 uppercase">Akşam</p>
-                <p className="mt-1 text-sm text-slate-200">{dailyPlan.evening}</p>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Akşam</p>
+                <p className="mt-2 text-sm text-slate-200">{dailyPlan.evening}</p>
               </div>
             </div>
-            <p className="text-sm text-slate-300">
-              DreamOracle uygulaması bu planı bildirim olarak gönderir ve gün sonunda yeni rüya yorumunuzu istemek için size hatırlatma yapar.
+            <p className="mt-4 text-sm text-slate-300">
+              DreamOracle uygulaması bu planı bildirim olarak gönderir ve gün sonunda yeni rüya kayıtları için sizi teşvik eder.
             </p>
           </section>
         )}
 
-        <section className="p-6 space-y-6 bg-slate-900/40 border border-slate-800 rounded-2xl">
-          <div className="text-center space-y-2">
-            <h3 className="text-2xl font-semibold">DreamOracle Fiyatlandırması</h3>
-            <p className="text-slate-300">Mevcut fiyatlar korunarak tüm özelliklere erişim planlarınız hazır.</p>
+        <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+          <div className="text-center">
+            <h3 className="text-3xl font-semibold text-white">DreamOracle fiyatlandırması</h3>
+            <p className="mt-2 text-sm text-slate-300">
+              Mevcut fiyatlandırmanız korunur; ek entegrasyon olmadan profesyonel stüdyoyu kullanmaya başlayın.
+            </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
             {pricingTiers.map((tier) => (
               <div
                 key={tier.name}
-                className="p-5 rounded-2xl border border-slate-800 bg-slate-950/40 hover:border-indigo-400/60"
+                className="rounded-3xl border border-white/10 bg-slate-950/60 p-6 text-left shadow-lg shadow-black/20"
               >
-                <p className="text-sm font-semibold text-indigo-200">{tier.name}</p>
-                <p className="mt-2 text-2xl font-bold">{tier.price}</p>
-                <p className="mt-2 text-sm text-slate-300">{tier.description}</p>
+                <p className="text-sm font-semibold uppercase tracking-wider text-indigo-200">{tier.name}</p>
+                <p className="mt-3 text-3xl font-bold text-white">{tier.price}</p>
+                <p className="mt-3 text-sm text-slate-300">{tier.description}</p>
                 <ul className="mt-4 space-y-2 text-sm text-slate-200 list-disc list-inside">
                   {tier.perks.map((perk) => (
                     <li key={perk}>{perk}</li>
@@ -870,20 +1178,88 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        <section className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+            <h3 className="text-2xl font-semibold text-white">Kullanıcı hikâyeleri</h3>
+            <p className="mt-2 text-sm text-slate-300">
+              DreamOracle ile rüya ve fal deneyimlerini ölçeklendiren profesyoneller neler söyledi?
+            </p>
+            <div className="mt-6 space-y-6">
+              {testimonials.map((testimonial) => (
+                <blockquote
+                  key={testimonial.name}
+                  className="rounded-2xl border border-white/10 bg-slate-950/60 p-5 text-sm text-slate-200"
+                >
+                  <p className="italic">“{testimonial.quote}”</p>
+                  <footer className="mt-3 text-xs text-indigo-200">
+                    {testimonial.name} • {testimonial.title}
+                  </footer>
+                </blockquote>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/25">
+            <h3 className="text-2xl font-semibold text-white">Sık sorulan sorular</h3>
+            <div className="mt-6 space-y-5">
+              {faqItems.map((item) => (
+                <div key={item.question} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                  <p className="text-sm font-semibold text-white">{item.question}</p>
+                  <p className="mt-2 text-sm text-slate-300">{item.answer}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-purple-500/10 to-fuchsia-500/20 px-8 py-10 text-center shadow-2xl shadow-indigo-500/30">
+          <div className="mx-auto max-w-3xl space-y-4">
+            <h3 className="text-3xl font-semibold text-white">DreamOracle ile kozmik stüdyonuzu hemen kurun</h3>
+            <p className="text-sm text-slate-200">
+              Rüya kayıtlarından fal yorumlarına, video paylaşımından bildirim planlarına kadar tüm akış tek platformda. Profesyonel görünüm ve otomasyonla müşterilerinizin deneyimini dönüştürün.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={scrollToWorkbench}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-base font-semibold text-slate-900 shadow-lg shadow-white/30 transition hover:bg-slate-200"
+              >
+                Rüya kaydını başlat
+              </button>
+              <a
+                href="https://dreamoracle.space"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/40 px-6 py-3 text-base font-semibold text-white hover:bg-white/10"
+              >
+                dreamoracle.space
+              </a>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="px-4 py-10 bg-slate-950/80 border-t border-slate-900">
-        <div className="max-w-6xl mx-auto flex flex-col gap-3 text-center md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-slate-400">
-            DreamOracle • Kişiye özel rüya yorumları ve fal rehberliği platformu.
-          </p>
-          <a
-            href="https://dreamoracle.space"
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm font-semibold text-indigo-300 hover:text-indigo-200"
-          >
-            dreamoracle.space
-          </a>
+
+      <footer className="border-t border-white/5 bg-slate-950/80 px-6 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 text-center text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
+          <div>
+            DreamOracle • Kişiye özel rüya yorumları, fal analizleri ve yaşam koçluğu otomasyonu.
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <a
+              href="mailto:support@dreamoracle.space"
+              className="hover:text-white"
+            >
+              support@dreamoracle.space
+            </a>
+            <a
+              href="https://dreamoracle.space"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-indigo-200 hover:text-indigo-100"
+            >
+              dreamoracle.space
+            </a>
+          </div>
         </div>
       </footer>
     </div>
