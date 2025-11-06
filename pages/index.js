@@ -158,6 +158,85 @@ const baseVideoScenes = [
   },
 ];
 
+const tarotDecks = {
+  'DreamOracle Destesi': [
+    {
+      name: 'Ay Kapısı',
+      icon: '🌙',
+      description:
+        'Sezgilerinize güvenerek gölgeleri aydınlatın; rüya anlatımınızdaki gizli mesajları ortaya çıkarır.',
+    },
+    {
+      name: 'Güneşin Nabzı',
+      icon: '☀️',
+      description:
+        'Cesaret ve görünürlük zamanı. Günlük planınızda parlamanız gereken bir alanı seçin.',
+    },
+    {
+      name: 'Yıldız Haritası',
+      icon: '✨',
+      description:
+        'Hayal ettiğiniz rotaya rehberlik eder; kozmik eşzamanlılıkları fark etmenizi sağlar.',
+    },
+    {
+      name: 'Rüya Şifacısı',
+      icon: '🕊️',
+      description:
+        'Duygusal şifayı hızlandırır, paylaşmaya çağırır ve koçluk sürecine yumuşaklık katar.',
+    },
+    {
+      name: 'Kule Işığı',
+      icon: '🏰',
+      description:
+        'Yapıların dönüşümünü simgeler; cesurca bırakmanız gereken kalıpları vurgular.',
+    },
+    {
+      name: 'Kader Çemberi',
+      icon: '♾️',
+      description:
+        'Yinelenen temaları ortaya çıkarır; döngülerinizi bilinçle yeniden yazmanıza yardım eder.',
+    },
+  ],
+  'Kozmik Sırlar Destesi': [
+    {
+      name: 'Nebula Koruyucusu',
+      icon: '🪐',
+      description:
+        'Derin sezgi ve koruyucu rehberlik getirir; sınırlarınızı güçlendirir.',
+    },
+    {
+      name: 'Zaman Yolcusu',
+      icon: '⏳',
+      description:
+        'Geçmiş ve geleceği birleştirir; rüyanızdaki motifleri yaşam dersleriyle bağlar.',
+    },
+    {
+      name: 'Galaksi Elçisi',
+      icon: '📡',
+      description:
+        'İlham mesajlarını yakalar; paylaşmanız gereken sembolik bir daveti işaret eder.',
+    },
+    {
+      name: 'Aurora Kapısı',
+      icon: '🌌',
+      description:
+        'Yeni başlangıçlara açılan ışıklı geçittir; günlük planınızda ilk adımı netleştirir.',
+    },
+    {
+      name: 'Kuantum Dansı',
+      icon: '🌀',
+      description:
+        'Enerjileri yeniden düzenler; ritüellerinizi daha yaratıcı hale getirir.',
+    },
+    {
+      name: 'Kristal Kule',
+      icon: '💎',
+      description:
+        'Netlik ve şeffaflık getirir; niyetlerinizi yüksek frekansta tutar.',
+    },
+  ],
+};
+
 const serviceOptions = [
   { label: 'Rüya Falı', description: 'Metin ve ses kaydınızla AI destekli yorum.' },
   { label: 'Kahve Falı', description: 'Fotoğraf yükleyerek telve desenlerini çözümleyin.' },
@@ -167,6 +246,54 @@ const serviceOptions = [
   { label: 'Astronomi Falı', description: 'Bilimsel gökyüzü verileriyle sezgiyi birleştirin.' },
   { label: 'Yaşam Koçluğu', description: 'Ritüeller, bildirimler ve etkinlik planları.' },
 ];
+
+function generateTarotSpread(deckName, text, tarotUpload) {
+  if (deckName === 'Kullanıcı Tarot Fotoğrafı') {
+    if (tarotUpload?.preview) {
+      return [
+        {
+          name: 'Yüklediğiniz Kart',
+          image: tarotUpload.preview,
+          description:
+            'DreamOracle, yüklediğiniz kartın sembollerini rüya hikâyenizle eşleştirerek kişisel bir yorum hazırlar.',
+        },
+      ];
+    }
+    return [
+      {
+        name: 'Kart yüklemesi bekleniyor',
+        description: 'Kendi tarot kartı fotoğrafınızı eklediğinizde görsel analizi otomatik başlar.',
+      },
+    ];
+  }
+
+  const deck = tarotDecks[deckName] || [];
+  if (!deck.length) {
+    return [];
+  }
+
+  const seed = text
+    ? text
+        .split('')
+        .reduce((total, char) => total + char.charCodeAt(0), 0)
+    : 108;
+
+  const spread = [];
+  for (let index = 0; index < Math.min(3, deck.length); index += 1) {
+    const position = (seed + index * 11) % deck.length;
+    const candidate = deck[position];
+    if (!spread.some((card) => card.name === candidate.name)) {
+      spread.push(candidate);
+      continue;
+    }
+    const fallback = deck[(position + index + 3) % deck.length];
+    if (!spread.some((card) => card.name === fallback.name)) {
+      spread.push(fallback);
+    }
+  }
+
+  return spread;
+}
 
 function generateShareUrl(mood, tags) {
   const params = new URLSearchParams({
@@ -193,6 +320,10 @@ export default function Home() {
     tarotDeck: 'DreamOracle Destesi',
     tarotUpload: null,
   });
+  const tarotSpread = useMemo(
+    () => generateTarotSpread(uploads.tarotDeck, dreamText, uploads.tarotUpload),
+    [uploads.tarotDeck, dreamText, uploads.tarotUpload]
+  );
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -324,6 +455,9 @@ export default function Home() {
     if (uploads.tarotUpload) {
       tags.push('Kişisel tarot açılımı');
     }
+    if (uploads.tarotDeck && uploads.tarotDeck !== 'Kullanıcı Tarot Fotoğrafı') {
+      tags.push('Tarot rehberliği');
+    }
 
     const synopsis = (() => {
       if (!dreamText.trim()) {
@@ -343,10 +477,19 @@ export default function Home() {
 
     const serviceInsights = selectedServices.map((service) => serviceCoaching[service]).filter(Boolean);
 
+    const deckInsight = uploads.tarotDeck
+      ? uploads.tarotDeck === 'Kullanıcı Tarot Fotoğrafı'
+        ? uploads.tarotUpload
+          ? 'Kendi tarot kartı görseliniz analize dahil edildi ve semboller DreamOracle destesine göre yorumlandı.'
+          : 'Kendi tarot kartınızı yüklediğinizde semboller DreamOracle tarafından çözümlenecek.'
+        : `${uploads.tarotDeck} kartları DreamOracle açılımınızda otomatik olarak seçildi.`
+      : null;
+
     const uploadInsights = [
       uploads.coffee && 'Yüklediğiniz kahve fincanı fotoğrafı telve desenlerinin tespitini hızlandırıyor.',
       uploads.palm && 'El fotoğrafınız yaşam çizgisi ve sezgisel çizgilerinizi koçluk planına taşıyor.',
       uploads.tarotUpload && 'Tarot görselleriniz DreamOracle destesindeki sembollerle eşleştiriliyor.',
+      deckInsight,
     ].filter(Boolean);
 
     const mood = primaryTheme?.mood || 'Meraklı';
@@ -562,6 +705,40 @@ export default function Home() {
             <p className="text-sm text-slate-300">
               DreamOracle destesi seçtiğinizde platform sizin için kartları hazırlar; kendi kartınızı yüklediğinizde karşılaştırmalı analiz yapılır.
             </p>
+            {tarotSpread.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-indigo-200">Otomatik Kart Açılımı</h4>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {tarotSpread.map((card, index) => (
+                    <div
+                      key={`${card.name}-${index}`}
+                      className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 space-y-2"
+                    >
+                      {card.image ? (
+                        <img
+                          src={card.image}
+                          alt={card.name}
+                          className="object-cover w-full h-32 rounded-lg border border-slate-800"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-full h-32 rounded-lg border border-dashed border-slate-800 bg-slate-900/60 text-3xl">
+                          {card.icon || '★'}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold text-indigo-200">{card.name}</p>
+                        <p className="text-xs text-slate-300">{card.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {uploads.tarotDeck === 'Kullanıcı Tarot Fotoğrafı' && !uploads.tarotUpload && (
+                  <p className="text-xs text-slate-400">
+                    Kendi kartınızı yüklediğinizde DreamOracle sembolleri görsel üzerinden çözümler.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
