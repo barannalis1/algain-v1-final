@@ -437,12 +437,166 @@ function generateTarotSpread(deckName, text, tarotUpload) {
   return spread;
 }
 
-function generateShareUrl(mood, tags) {
+function generateShareUrl(mood, tags, services) {
   const params = new URLSearchParams({
     mood: mood || 'Meraklı',
     tag: tags?.[0] || 'ruya',
   });
+  if (services?.length) {
+    params.set('services', services.join(','));
+  }
   return `https://dreamoracle.space/paylas?${params.toString()}`;
+}
+
+function normaliseDreamText(text = '') {
+  return text
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function extractKeywordHighlights(text) {
+  const counts = new Map();
+  normaliseDreamText(text.toLowerCase())
+    .filter((word) => word.length > 3)
+    .forEach((word) => {
+      counts.set(word, (counts.get(word) || 0) + 1);
+    });
+
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([word, value]) => ({ word, weight: value }));
+}
+
+function deriveDreamAnalysis({ text, services, uploads }) {
+  const normalized = text.toLowerCase();
+  const enrichedThemes = themeLibrary
+    .map((theme) => ({
+      ...theme,
+      matchCount: theme.keywords.reduce(
+        (total, keyword) => (normalized.includes(keyword) ? total + 1 : total),
+        0
+      ),
+    }))
+    .filter((theme) => theme.matchCount > 0)
+    .sort((a, b) => b.matchCount - a.matchCount);
+
+  const primaryTheme = enrichedThemes[0];
+  const tags = new Set();
+  enrichedThemes.forEach((theme) => {
+    tags.add(theme.tag);
+    if (theme.matchCount > 1) {
+      tags.add(`${theme.mood} motifleri`);
+    }
+  });
+
+  const defaultTag = 'Sezgisel keşif';
+  if (!tags.size) {
+    tags.add(defaultTag);
+  }
+
+  if (uploads.coffee) {
+    tags.add('Kahve sembolleri');
+  }
+  if (uploads.palm) {
+    tags.add('Avuç içi bilgeliği');
+  }
+  if (uploads.tarotUpload) {
+    tags.add('Kişisel tarot açılımı');
+  }
+  if (uploads.tarotDeck && uploads.tarotDeck !== 'Kullanıcı Tarot Fotoğrafı') {
+    tags.add('Tarot rehberliği');
+  }
+
+  const insights = enrichedThemes.length
+    ? enrichedThemes.map((theme) => theme.insight)
+    : ['Rüyanız benzersiz semboller içeriyor, DreamOracle sezgisel analizi sizinle birlikte şekillendiriyor.'];
+
+  const synopsis = (() => {
+    if (!text.trim()) {
+      return 'Rüya hikâyenizi detaylandırdıkça yapay zekâ sembolleri daha da netleştirecek.';
+    }
+    const firstSentence = text.trim().split(/(?<=[.!?])\s+/)[0];
+    const sanitized = firstSentence?.replace(/[.!?]+$/, '') || 'Rüya';
+    return `Anlatımınız "${sanitized}" ifadesiyle başlıyor ve DreamOracle bunu rehberliğe dönüştürüyor.`;
+  })();
+
+  const ritual =
+    primaryTheme?.ritual ||
+    'Uykuya dalmadan önce üç derin nefes alın ve rüyanızın ana duygusunu tekrar edin.';
+
+  const serviceInsights = services
+    .map((service) => serviceCoaching[service])
+    .filter(Boolean);
+
+  const uploadInsights = [
+    uploads.coffee && 'Yüklediğiniz kahve fincanı fotoğrafı telve desenlerinin tespitini hızlandırıyor.',
+    uploads.palm && 'El fotoğrafınız yaşam çizgisi ve sezgisel çizgilerinizi koçluk planına taşıyor.',
+    uploads.tarotUpload && 'Tarot görselleriniz DreamOracle destesindeki sembollerle eşleştiriliyor.',
+    uploads.tarotDeck && uploads.tarotDeck !== 'Kullanıcı Tarot Fotoğrafı'
+      ? `${uploads.tarotDeck} kartları DreamOracle açılımınızda otomatik olarak seçildi.`
+      : uploads.tarotDeck === 'Kullanıcı Tarot Fotoğrafı'
+      ? uploads.tarotUpload
+        ? 'Kendi tarot kartı görseliniz analize dahil edildi ve semboller DreamOracle destesine göre yorumlandı.'
+        : 'Kendi tarot kartınızı yüklediğinizde semboller DreamOracle tarafından çözümlenecek.'
+      : null,
+  ].filter(Boolean);
+
+  return {
+    mood: primaryTheme?.mood || 'Meraklı',
+    tags: Array.from(tags),
+    synopsis,
+    insights,
+    ritual,
+    serviceInsights,
+    uploadInsights,
+    keywordHighlights: extractKeywordHighlights(text),
+  };
+}
+
+function createVideoScenes({ mood, tags, uploads, keywordHighlights }) {
+  const descriptor = tags[0] || 'DreamOracle vizyonu';
+  return baseVideoScenes.map((scene) => {
+    if (scene.id === 'intro') {
+      return {
+        ...scene,
+        narration: `Rüyanızdan yükselen ${descriptor.toLowerCase()} teması DreamOracle stüdyosunu aydınlatıyor.`,
+      };
+    }
+    if (scene.id === 'symbol') {
+      const focusKeyword = keywordHighlights?.[0]?.word;
+      return {
+        ...scene,
+        visual: focusKeyword
+          ? `${descriptor} sembolü ${focusKeyword} anahtar kelimesiyle birlikte parlıyor.`
+          : scene.visual,
+        narration: focusKeyword
+          ? `AI, ${focusKeyword} ifadesini fal rehberleriyle eşleştirerek derinlemesine bir hikâye oluşturuyor.`
+          : scene.narration,
+      };
+    }
+    if (scene.id === 'coaching') {
+      const uploadReference = uploads.coffee
+        ? 'kahve fincanı'
+        : uploads.palm
+        ? 'avuç içi'
+        : uploads.tarotUpload
+        ? 'tarot kartı'
+        : 'rüya günlükleri';
+      return {
+        ...scene,
+        narration: `Yaşam koçluğu modu ${mood.toLowerCase()} modunda ${uploadReference} içgörüleriyle planlar hazırlıyor.`,
+      };
+    }
+    if (scene.id === 'share') {
+      return {
+        ...scene,
+        narration: `DreamOracle paylaşım bağlantınız ${descriptor.toLowerCase()} temasıyla topluluğu bekliyor.`,
+      };
+    }
+    return scene;
+  });
 }
 
 export default function Home() {
@@ -483,6 +637,8 @@ export default function Home() {
   const audioChunksRef = useRef([]);
   const speechRecognitionRef = useRef(null);
   const analyzeTimeoutRef = useRef(null);
+  const autoAddedServicesRef = useRef(new Set());
+  const manuallyRemovedServicesRef = useRef(new Set());
 
   useEffect(() => {
     return () => {
@@ -512,12 +668,60 @@ export default function Home() {
     setAnalysisFresh(false);
   }, [dreamText, transcript, selectedServices, coffee, palm, tarotDeck, tarotUpload]);
 
+  useEffect(() => {
+    if (!coffee) {
+      autoAddedServicesRef.current.delete('Kahve Falı');
+      manuallyRemovedServicesRef.current.delete('Kahve Falı');
+    }
+    if (!palm) {
+      autoAddedServicesRef.current.delete('El Falı');
+      manuallyRemovedServicesRef.current.delete('El Falı');
+    }
+    if (!tarotDeck && !tarotUpload) {
+      autoAddedServicesRef.current.delete('Tarot Falı');
+      manuallyRemovedServicesRef.current.delete('Tarot Falı');
+    }
+
+    setSelectedServices((prev) => {
+      let updatedList = prev;
+      let changed = false;
+      const ensureService = (service, condition) => {
+        if (!condition || manuallyRemovedServicesRef.current.has(service)) {
+          return;
+        }
+        if (updatedList.includes(service)) {
+          autoAddedServicesRef.current.add(service);
+          return;
+        }
+        if (autoAddedServicesRef.current.has(service)) {
+          return;
+        }
+        if (!changed) {
+          updatedList = [...updatedList];
+          changed = true;
+        }
+        updatedList.push(service);
+        autoAddedServicesRef.current.add(service);
+      };
+
+      ensureService('Kahve Falı', Boolean(coffee));
+      ensureService('El Falı', Boolean(palm));
+      ensureService('Tarot Falı', Boolean(tarotDeck || tarotUpload));
+
+      return changed ? updatedList : prev;
+    });
+  }, [coffee, palm, tarotDeck, tarotUpload]);
+
   const toggleService = (service) => {
-    setSelectedServices((prev) =>
-      prev.includes(service)
-        ? prev.filter((item) => item !== service)
-        : [...prev, service]
-    );
+    setSelectedServices((prev) => {
+      if (prev.includes(service)) {
+        manuallyRemovedServicesRef.current.add(service);
+        autoAddedServicesRef.current.delete(service);
+        return prev.filter((item) => item !== service);
+      }
+      manuallyRemovedServicesRef.current.delete(service);
+      return [...prev, service];
+    });
   };
 
   const attachFile = (type, file) => {
@@ -607,100 +811,38 @@ export default function Home() {
   const computeAnalysis = () => {
     if (isAnalyzing) return;
     setIsAnalyzing(true);
-    const normalized = dreamText.toLowerCase();
-    const matchedThemes = themeLibrary.filter((theme) =>
-      theme.keywords.some((keyword) => normalized.includes(keyword))
-    );
-    const primaryTheme = matchedThemes[0];
 
-    const tags = matchedThemes.map((theme) => theme.tag);
-    if (coffee) {
-      tags.push('Kahve sembolleri');
+    const trimmedText = dreamText.trim();
+    const trimmedTranscript = transcript.trim();
+    const combinedParts = [trimmedText];
+    if (trimmedTranscript && !trimmedText.includes(trimmedTranscript)) {
+      combinedParts.push(trimmedTranscript);
     }
-    if (palm) {
-      tags.push('Avuç içi bilgeliği');
-    }
-    if (tarotUpload) {
-      tags.push('Kişisel tarot açılımı');
-    }
-    if (tarotDeck && tarotDeck !== 'Kullanıcı Tarot Fotoğrafı') {
-      tags.push('Tarot rehberliği');
-    }
+    const combinedText = combinedParts.filter(Boolean).join('\n\n') || trimmedTranscript;
 
-    const synopsis = (() => {
-      if (!dreamText.trim()) {
-        return 'Rüya hikâyenizi detaylandırdıkça yapay zekâ sembolleri daha da netleştirecek.';
-      }
-      const firstSentence = dreamText.trim().split(/(?<=[.!?])\s+/)[0];
-      const sanitized = firstSentence?.replace(/[.!?]+$/, '') || 'Rüya';
-      return `Anlatımınız "${sanitized}" ifadesiyle başlıyor ve DreamOracle bunu rehberliğe dönüştürüyor.`;
-    })();
-
-    const insights = matchedThemes.length
-      ? matchedThemes.map((theme) => theme.insight)
-      : ['Rüyanız benzersiz semboller içeriyor, DreamOracle sezgisel analizi sizinle birlikte şekillendiriyor.'];
-
-    const ritual = primaryTheme?.ritual ||
-      'Uykuya dalmadan önce üç derin nefes alın ve rüyanızın ana duygusunu tekrar edin.';
-
-    const serviceInsights = selectedServices.map((service) => serviceCoaching[service]).filter(Boolean);
-
-    const deckInsight = tarotDeck
-      ? tarotDeck === 'Kullanıcı Tarot Fotoğrafı'
-        ? tarotUpload
-          ? 'Kendi tarot kartı görseliniz analize dahil edildi ve semboller DreamOracle destesine göre yorumlandı.'
-          : 'Kendi tarot kartınızı yüklediğinizde semboller DreamOracle tarafından çözümlenecek.'
-        : `${tarotDeck} kartları DreamOracle açılımınızda otomatik olarak seçildi.`
-      : null;
-
-    const uploadInsights = [
-      coffee && 'Yüklediğiniz kahve fincanı fotoğrafı telve desenlerinin tespitini hızlandırıyor.',
-      palm && 'El fotoğrafınız yaşam çizgisi ve sezgisel çizgilerinizi koçluk planına taşıyor.',
-      tarotUpload && 'Tarot görselleriniz DreamOracle destesindeki sembollerle eşleştiriliyor.',
-      deckInsight,
-    ].filter(Boolean);
-
-    const mood = primaryTheme?.mood || 'Meraklı';
-
-    const result = {
-      mood,
-      tags: Array.from(new Set(tags.length ? tags : ['Sezgisel keşif'])),
-      synopsis,
-      insights,
-      ritual,
-      serviceInsights,
-      uploadInsights,
-    };
+    const analysisPayload = deriveDreamAnalysis({
+      text: combinedText || '',
+      services: selectedServices,
+      uploads: { coffee, palm, tarotDeck, tarotUpload },
+    });
 
     const finalize = () => {
       analyzeTimeoutRef.current = null;
-      setAnalysis(result);
-      setShareUrl(generateShareUrl(result.mood, result.tags));
+      setAnalysis(analysisPayload);
+      setShareUrl(generateShareUrl(analysisPayload.mood, analysisPayload.tags, selectedServices));
 
-      const moodPlan = notificationPlaybook[result.mood] || notificationPlaybook.Meraklı;
+      const moodPlan = notificationPlaybook[analysisPayload.mood] || notificationPlaybook.Meraklı;
       setDailyPlan(moodPlan);
 
-      const personalizedScenes = baseVideoScenes.map((scene) => {
-        if (scene.id === 'symbol') {
-          return {
-            ...scene,
-            visual: primaryTheme
-              ? `${primaryTheme.tag} teması DreamOracle portalında görselleşiyor.`
-              : scene.visual,
-            narration: primaryTheme
-              ? `${primaryTheme.insight} Seçtiğiniz fal hizmetleri bu sembolü detaylandırıyor.`
-              : scene.narration,
-          };
-        }
-        if (scene.id === 'coaching') {
-          return {
-            ...scene,
-            narration: `Yaşam koçluğu modu ${result.mood.toLowerCase()} titreşiminde bildirimler planlıyor.`,
-          };
-        }
-        return scene;
-      });
-      setVideoScenes(personalizedScenes);
+      setVideoScenes(
+        createVideoScenes({
+          mood: analysisPayload.mood,
+          tags: analysisPayload.tags,
+          uploads: { coffee, palm, tarotUpload },
+          keywordHighlights: analysisPayload.keywordHighlights,
+        })
+      );
+
       setIsAnalyzing(false);
       setAnalysisFresh(true);
       setActiveCategory('fortune');
@@ -898,6 +1040,22 @@ export default function Home() {
             <p className="font-semibold text-white">Paylaşım bağlantısı</p>
             <p className="mt-1 text-sm text-slate-300">{shareUrl}</p>
           </div>
+          {!!analysis?.keywordHighlights.length && (
+            <div className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/10 p-4 text-xs text-fuchsia-100">
+              <p className="text-sm font-semibold text-white">Videoya yansıyan anahtar kelimeler</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {analysis.keywordHighlights.map((highlight) => (
+                  <span
+                    key={`workflow-video-${highlight.word}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold text-fuchsia-100"
+                  >
+                    {highlight.word}
+                    <span className="text-[10px] text-fuchsia-200/80">×{highlight.weight}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300">
@@ -1410,6 +1568,22 @@ export default function Home() {
                       </ul>
                     </div>
                   )}
+                  {!!analysis.keywordHighlights.length && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-white">Anahtar kelime izleri</p>
+                      <div className="flex flex-wrap gap-2">
+                        {analysis.keywordHighlights.map((highlight) => (
+                          <span
+                            key={highlight.word}
+                            className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold text-fuchsia-100"
+                          >
+                            {highlight.word}
+                            <span className="text-[10px] text-fuchsia-200/80">×{highlight.weight}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {!!analysis.uploadInsights.length && (
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-white">Yüklediğiniz görseller</p>
@@ -1465,6 +1639,22 @@ export default function Home() {
                     Videoyu paylaş: {shareUrl.replace('https://', '')}
                   </a>
                 </div>
+                {!!analysis?.keywordHighlights.length && (
+                  <div className="mt-6 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/10 p-4 text-xs text-fuchsia-100">
+                    <p className="text-sm font-semibold text-white">Videoda vurgulanan motifler</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {analysis.keywordHighlights.map((highlight) => (
+                        <span
+                          key={`video-highlight-${highlight.word}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold text-fuchsia-100"
+                        >
+                          {highlight.word}
+                          <span className="text-[10px] text-fuchsia-200/80">×{highlight.weight}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <p className="text-sm text-slate-300">
