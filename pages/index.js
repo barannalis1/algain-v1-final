@@ -608,6 +608,10 @@ export default function Home() {
   const [selectedServices, setSelectedServices] = useState(['Rüya Falı', 'Yaşam Koçluğu']);
   const [analysis, setAnalysis] = useState(null);
   const [videoScenes, setVideoScenes] = useState(baseVideoScenes);
+  const [videoStatus, setVideoStatus] = useState('idle');
+  const [videoDownloadUrl, setVideoDownloadUrl] = useState('');
+  const [videoError, setVideoError] = useState('');
+  const [videoFileName, setVideoFileName] = useState('');
   const [shareUrl, setShareUrl] = useState('');
   const [dailyPlan, setDailyPlan] = useState(null);
   const [uploads, setUploads] = useState({
@@ -664,8 +668,25 @@ export default function Home() {
   }, [audioUrl, coffee, palm, tarotUpload]);
 
   useEffect(() => {
+    return () => {
+      if (videoDownloadUrl) {
+        URL.revokeObjectURL(videoDownloadUrl);
+      }
+    };
+  }, [videoDownloadUrl]);
+
+  useEffect(() => {
     if (!analysis) return;
     setAnalysisFresh(false);
+    setVideoStatus((prev) => {
+      if (prev === 'rendering') {
+        return prev;
+      }
+      if (prev === 'ready') {
+        return 'stale';
+      }
+      return prev;
+    });
   }, [dreamText, transcript, selectedServices, coffee, palm, tarotDeck, tarotUpload]);
 
   useEffect(() => {
@@ -820,6 +841,14 @@ export default function Home() {
     }
     const combinedText = combinedParts.filter(Boolean).join('\n\n') || trimmedTranscript;
 
+    if (videoDownloadUrl && typeof URL !== 'undefined') {
+      URL.revokeObjectURL(videoDownloadUrl);
+    }
+    setVideoDownloadUrl('');
+    setVideoFileName('');
+    setVideoError('');
+    setVideoStatus('idle');
+
     const analysisPayload = deriveDreamAnalysis({
       text: combinedText || '',
       services: selectedServices,
@@ -843,6 +872,11 @@ export default function Home() {
         })
       );
 
+      setVideoStatus('idle');
+      setVideoError('');
+      setVideoFileName('');
+      setVideoDownloadUrl('');
+
       setIsAnalyzing(false);
       setAnalysisFresh(true);
       setActiveCategory('fortune');
@@ -855,6 +889,152 @@ export default function Home() {
       analyzeTimeoutRef.current = window.setTimeout(finalize, 350);
     } else {
       finalize();
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!analysis) {
+      setVideoError('Önce DreamOracle yorumunu oluşturun.');
+      return;
+    }
+    if (videoStatus === 'rendering') return;
+
+    if (typeof window === 'undefined' || typeof window.MediaRecorder === 'undefined') {
+      setVideoError('Tarayıcınız video kaydını desteklemiyor.');
+      setVideoStatus('error');
+      return;
+    }
+
+    setVideoError('');
+    setVideoStatus('rendering');
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const context = canvas.getContext('2d');
+
+      if (!context || typeof canvas.captureStream !== 'function') {
+        throw new Error('Canvas yakalama özelliği bu tarayıcıda desteklenmiyor.');
+      }
+
+      const stream = canvas.captureStream(30);
+      const mimeCandidates = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+      ];
+      const supportedMimeType = mimeCandidates.find((type) =>
+        window.MediaRecorder.isTypeSupported ? window.MediaRecorder.isTypeSupported(type) : false
+      );
+      const recorder = supportedMimeType
+        ? new window.MediaRecorder(stream, { mimeType: supportedMimeType })
+        : new window.MediaRecorder(stream);
+
+      const chunks = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) {
+          chunks.push(event.data);
+        }
+      };
+
+      const wait = (duration) =>
+        new Promise((resolve) => {
+          window.setTimeout(resolve, duration);
+        });
+
+      const drawScene = (scene) => {
+        context.fillStyle = '#020617';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, '#312e81');
+        gradient.addColorStop(0.5, '#4c1d95');
+        gradient.addColorStop(1, '#831843');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        context.fillStyle = 'rgba(2, 6, 23, 0.6)';
+        context.fillRect(60, 60, canvas.width - 120, canvas.height - 120);
+
+        const renderTextBlock = (text, startY, fontSize, color, lineHeight, fontWeight = '600') => {
+          context.font = `${fontWeight} ${fontSize}px 'Inter', 'Segoe UI', sans-serif`;
+          context.fillStyle = color;
+          context.textBaseline = 'top';
+          context.textAlign = 'left';
+          const words = text.split(' ');
+          const maxWidth = canvas.width - 200;
+          let line = '';
+          let y = startY;
+
+          words.forEach((word, index) => {
+            const testLine = line ? `${line} ${word}` : word;
+            const { width } = context.measureText(testLine);
+            if (width > maxWidth && line) {
+              context.fillText(line, 100, y);
+              line = word;
+              y += lineHeight;
+            } else {
+              line = testLine;
+            }
+
+            if (index === words.length - 1) {
+              context.fillText(line, 100, y);
+            }
+          });
+
+          return y + lineHeight;
+        };
+
+        const nextY = renderTextBlock(scene.title, 140, 46, '#bfdbfe', 54, '700');
+        const visualY = renderTextBlock(scene.visual, nextY + 20, 28, '#e2e8f0', 38, '500');
+        renderTextBlock(scene.narration, visualY + 20, 30, '#ddd6fe', 40, '500');
+
+        context.fillStyle = '#22d3ee';
+        context.font = "500 20px 'Inter', 'Segoe UI', sans-serif";
+        context.fillText('dreamoracle.space', 100, canvas.height - 120);
+        context.fillStyle = '#f472b6';
+        context.fillText(`Mood: ${analysis.mood}`, 100, canvas.height - 80);
+      };
+
+      const recordingPromise = new Promise((resolve, reject) => {
+        recorder.onstop = () => {
+          try {
+            if (videoDownloadUrl && typeof URL !== 'undefined') {
+              URL.revokeObjectURL(videoDownloadUrl);
+            }
+            const blob = new Blob(chunks, { type: supportedMimeType || 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            setVideoDownloadUrl(url);
+            setVideoFileName(`dreamoracle-${Date.now()}.webm`);
+            setVideoStatus('ready');
+            resolve();
+          } catch (error) {
+            reject(error);
+          } finally {
+            stream.getTracks().forEach((track) => track.stop());
+          }
+        };
+        recorder.onerror = (event) => {
+          stream.getTracks().forEach((track) => track.stop());
+          reject(event.error || new Error('Video kaydı sırasında bir hata oluştu.'));
+        };
+      });
+
+      recorder.start();
+      for (const scene of videoScenes) {
+        drawScene(scene);
+        await wait(1800);
+      }
+      recorder.stop();
+
+      await recordingPromise;
+    } catch (error) {
+      console.error(error);
+      setVideoStatus('error');
+      setVideoError(
+        error?.message || 'Video üretimi başarısız oldu. Lütfen farklı bir tarayıcıyla tekrar deneyin.'
+      );
     }
   };
 
@@ -883,7 +1063,7 @@ export default function Home() {
     })();
 
     const fortuneReady = hasAnalysis && analysisFresh;
-    const videoReady = hasAnalysis && analysisFresh && Boolean(shareUrl);
+    const videoReady = hasAnalysis && analysisFresh && videoStatus === 'ready';
     const planReady = Boolean(dailyPlan) && analysisFresh;
 
     return {
@@ -900,9 +1080,13 @@ export default function Home() {
       video: {
         ready: videoReady,
         detail: fortuneReady
-          ? analysisFresh
-            ? 'Storyboard sahneleri oluşturuldu ve paylaşım bağlantısı hazır.'
-            : 'Yeni bilgiler bulundu. Güncel video için analizi yenileyin.'
+          ? videoStatus === 'rendering'
+            ? 'Video oluşturuluyor. Lütfen işlemin tamamlanmasını bekleyin.'
+            : videoStatus === 'ready'
+            ? 'Video üretildi ve indirilmeye hazır.'
+            : videoStatus === 'stale'
+            ? 'Analiz güncellendi, videoyu yeniden üretmeniz gerekiyor.'
+            : 'Storyboard sahneleri hazır. "Videoyu üret" ile çıktıyı oluşturun.'
           : 'Video için önce DreamOracle analizini çalıştırın.',
       },
       plan: {
@@ -922,6 +1106,7 @@ export default function Home() {
     hasAnalysis,
     selectedServices,
     shareUrl,
+    videoStatus,
     tarotDeck,
     tarotSpread,
     tarotUpload,
@@ -1037,6 +1222,51 @@ export default function Home() {
             </ul>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+            <p className="font-semibold text-white">Video durumu</p>
+            <p className="mt-1 text-sm text-slate-300">
+              {videoStatus === 'rendering'
+                ? 'Video oluşturuluyor. İlerleme tamamlandığında indirilebilir hale gelecek.'
+                : videoStatus === 'ready'
+                ? 'Video hazır! Aşağıdan izleyebilir veya indirebilirsiniz.'
+                : videoStatus === 'stale'
+                ? 'Analiz güncellendi. Yeni video oluşturmak için düğmeye basın.'
+                : 'Storyboard hazır. Videoyu üretmek için aşağıdaki düğmeyi kullanın.'}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleGenerateVideo}
+                disabled={videoStatus === 'rendering'}
+                className="inline-flex items-center gap-2 rounded-full bg-fuchsia-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-fuchsia-500/30 transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {videoStatus === 'rendering' ? 'Video oluşturuluyor...' : 'Videoyu üret'}
+              </button>
+              {videoDownloadUrl && (
+                <a
+                  href={videoDownloadUrl}
+                  download={videoFileName || 'dreamoracle-video.webm'}
+                  className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400"
+                >
+                  Videoyu indir
+                </a>
+              )}
+              {videoDownloadUrl && (
+                <a
+                  href={videoDownloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/40 hover:text-white"
+                >
+                  Videoyu yeni sekmede aç
+                </a>
+              )}
+            </div>
+            {videoError && <p className="mt-2 text-xs font-semibold text-rose-300">{videoError}</p>}
+            {videoDownloadUrl && (
+              <video controls src={videoDownloadUrl} className="mt-4 w-full rounded-2xl border border-white/10 bg-black" />
+            )}
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
             <p className="font-semibold text-white">Paylaşım bağlantısı</p>
             <p className="mt-1 text-sm text-slate-300">{shareUrl}</p>
           </div>
@@ -1102,6 +1332,10 @@ export default function Home() {
     tarotSpread,
     tarotUpload,
     transcript,
+    videoDownloadUrl,
+    videoError,
+    videoFileName,
+    videoStatus,
     videoScenes,
     isAnalyzing,
     voiceStatus,
@@ -1356,6 +1590,168 @@ export default function Home() {
                 <p className="mt-2 text-xs text-amber-300">
                   Bilgileriniz güncellendi. Yeni sonuç almak için analizi yeniden çalıştırın.
                 </p>
+              )}
+              {analysis && (
+                <div className="mt-8 space-y-6">
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="text-lg font-semibold text-white">DreamOracle yorumu</h3>
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                          analysisFresh
+                            ? 'border border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
+                            : 'border border-amber-400/30 bg-amber-500/10 text-amber-100'
+                        }`}
+                      >
+                        {analysisFresh ? 'GÜNCEL' : 'YENİ ANALİZ GEREKLİ'}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-200">{analysis.synopsis}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {analysis.tags.map((tag) => (
+                        <span
+                          key={`primary-analysis-tag-${tag}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-semibold text-indigo-100"
+                        >
+                          ✧ {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-5 text-sm font-semibold text-indigo-200">Mood: {analysis.mood}</p>
+                    <p className="mt-2 text-sm text-slate-300">{analysis.ritual}</p>
+                    {!!analysis.insights.length && (
+                      <ul className="mt-4 space-y-2 text-sm text-slate-300">
+                        {analysis.insights.map((insight, index) => (
+                          <li key={`insight-${index}`} className="flex gap-2">
+                            <span className="text-indigo-300">•</span>
+                            <span>{insight}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {!!analysis.keywordHighlights.length && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {analysis.keywordHighlights.map((highlight) => (
+                          <span
+                            key={`keyword-${highlight.word}`}
+                            className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold text-fuchsia-100"
+                          >
+                            {highlight.word}
+                            <span className="text-[10px] text-fuchsia-200/70">×{highlight.weight}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {!!analysis.serviceInsights.length && (
+                      <div className="mt-4 space-y-2 text-sm text-slate-300">
+                        {analysis.serviceInsights.map((item, index) => (
+                          <p key={`service-insight-${index}`}>⚑ {item}</p>
+                        ))}
+                      </div>
+                    )}
+                    {!!analysis.uploadInsights.length && (
+                      <div className="mt-4 space-y-2 text-xs text-slate-400">
+                        {analysis.uploadInsights.map((item, index) => (
+                          <p key={`upload-insight-${index}`}>{item}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="text-lg font-semibold text-white">Videoya dönüştür</h3>
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                          videoStatus === 'ready'
+                            ? 'border border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
+                            : videoStatus === 'rendering'
+                            ? 'border border-indigo-400/40 bg-indigo-500/10 text-indigo-100'
+                            : videoStatus === 'stale'
+                            ? 'border border-amber-400/30 bg-amber-500/10 text-amber-100'
+                            : videoStatus === 'error'
+                            ? 'border border-rose-400/30 bg-rose-500/10 text-rose-100'
+                            : 'border border-white/15 bg-white/5 text-slate-200'
+                        }`}
+                      >
+                        {videoStatus === 'ready'
+                          ? 'HAZIR'
+                          : videoStatus === 'rendering'
+                          ? 'OLUŞTURULUYOR'
+                          : videoStatus === 'stale'
+                          ? 'YENİLE'
+                          : videoStatus === 'error'
+                          ? 'HATA'
+                          : 'BEKLEMEDE'}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-300">
+                      DreamOracle sahnelerini kozmik tema ile birleştirerek WebM formatında kısa bir video oluşturur. Videoyu
+                      indirip paylaşabilirsiniz.
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleGenerateVideo}
+                        disabled={videoStatus === 'rendering'}
+                        className="inline-flex items-center gap-2 rounded-full bg-fuchsia-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/30 transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {videoStatus === 'rendering' ? 'Video oluşturuluyor...' : 'Videoyu üret'}
+                      </button>
+                      {shareUrl && (
+                        <a
+                          href={shareUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-fuchsia-400/40 hover:text-white"
+                        >
+                          Paylaşım bağlantısını aç
+                        </a>
+                      )}
+                    </div>
+                    {videoStatus === 'stale' && (
+                      <p className="mt-3 text-xs text-amber-300">
+                        Rüya bilgileriniz değişti. Güncel sahneler için analizi yeniden çalıştırıp videoyu tekrar üretin.
+                      </p>
+                    )}
+                    {videoError && (
+                      <p className="mt-3 text-xs font-semibold text-rose-300">{videoError}</p>
+                    )}
+                    {videoDownloadUrl && (
+                      <div className="mt-5 space-y-4">
+                        <video
+                          controls
+                          src={videoDownloadUrl}
+                          className="w-full rounded-2xl border border-white/10 bg-black"
+                        />
+                        <div className="flex flex-wrap gap-3">
+                          <a
+                            href={videoDownloadUrl}
+                            download={videoFileName || 'dreamoracle-video.webm'}
+                            className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400"
+                          >
+                            Videoyu indir
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                videoDownloadUrl &&
+                                typeof navigator !== 'undefined' &&
+                                navigator.clipboard &&
+                                typeof navigator.clipboard.writeText === 'function'
+                              ) {
+                                navigator.clipboard.writeText(shareUrl || 'https://dreamoracle.space');
+                              }
+                            }}
+                            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/40 hover:text-white"
+                          >
+                            Paylaşım bağlantısını kopyala
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
