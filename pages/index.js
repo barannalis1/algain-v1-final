@@ -158,6 +158,86 @@ const baseVideoScenes = [
   },
 ];
 
+const videoMoodPalettes = {
+  Sakin: {
+    primary: '#a5f3fc',
+    primaryLabel: 'pastel turkuaz',
+    accent: '#fbcfe8',
+    accentLabel: 'pudra pembesi',
+    backdrop: '#f8fafc',
+    rim: '#bae6fd',
+    orbit: '#c4b5fd',
+    particle: '#bae6fd',
+    text: '#0f172a',
+  },
+  Yükselen: {
+    primary: '#c7d2fe',
+    primaryLabel: 'lavanta',
+    accent: '#fcd34d',
+    accentLabel: 'güneş sarısı',
+    backdrop: '#fdf4ff',
+    rim: '#fde68a',
+    orbit: '#f472b6',
+    particle: '#e9d5ff',
+    text: '#1f2937',
+  },
+  Derin: {
+    primary: '#ddd6fe',
+    primaryLabel: 'sisli menekşe',
+    accent: '#fda4af',
+    accentLabel: 'şeftali pembe',
+    backdrop: '#f5f3ff',
+    rim: '#c4b5fd',
+    orbit: '#f9a8d4',
+    particle: '#e9d5ff',
+    text: '#111827',
+  },
+  Sosyal: {
+    primary: '#fbcfe8',
+    primaryLabel: 'pembe şafak',
+    accent: '#bfdbfe',
+    accentLabel: 'pudra mavi',
+    backdrop: '#fff7ed',
+    rim: '#fecdd3',
+    orbit: '#c7d2fe',
+    particle: '#fce7f3',
+    text: '#1f2937',
+  },
+  Keşif: {
+    primary: '#bfdbfe',
+    primaryLabel: 'pastel gökyüzü',
+    accent: '#a7f3d0',
+    accentLabel: 'nane yeşili',
+    backdrop: '#ecfeff',
+    rim: '#99f6e4',
+    orbit: '#fde68a',
+    particle: '#bae6fd',
+    text: '#0f172a',
+  },
+  Meraklı: {
+    primary: '#fde68a',
+    primaryLabel: 'ılık amber',
+    accent: '#c4b5fd',
+    accentLabel: 'leylak',
+    backdrop: '#fef9c3',
+    rim: '#fcd34d',
+    orbit: '#f472b6',
+    particle: '#fef3c7',
+    text: '#1f2937',
+  },
+  Default: {
+    primary: '#c7d2fe',
+    primaryLabel: 'lavanta',
+    accent: '#f9a8d4',
+    accentLabel: 'pastel fuşya',
+    backdrop: '#f8fafc',
+    rim: '#e0e7ff',
+    orbit: '#f5d0fe',
+    particle: '#e0f2fe',
+    text: '#0f172a',
+  },
+};
+
 const premiumHighlights = [
   {
     icon: '🎙️',
@@ -599,6 +679,26 @@ function createVideoScenes({ mood, tags, uploads, keywordHighlights }) {
   });
 }
 
+function deriveVideoStyleGuide(analysis = {}) {
+  const palette = videoMoodPalettes[analysis.mood] || videoMoodPalettes.Default;
+  const topicCandidate = Array.isArray(analysis.tags) && analysis.tags.length ? analysis.tags[0] : '';
+  const synopsisPhrase = typeof analysis.synopsis === 'string' ? analysis.synopsis.split(/[.!?]/)[0] : '';
+  const topic = topicCandidate || synopsisPhrase || analysis.mood || 'DreamOracle rüyası';
+
+  return {
+    topic,
+    primaryColor: palette.primary,
+    primaryColorName: palette.primaryLabel,
+    accentColor: palette.accent,
+    accentColorName: palette.accentLabel,
+    backdropColor: palette.backdrop,
+    rimLightColor: palette.rim,
+    orbitColor: palette.orbit,
+    particleColor: palette.particle,
+    textColor: palette.text,
+  };
+}
+
 function normalizeKeywordHighlights(highlights, fallback = []) {
   if (!Array.isArray(highlights)) {
     return fallback;
@@ -659,6 +759,7 @@ export default function Home() {
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState('');
   const [videoScenes, setVideoScenes] = useState(baseVideoScenes);
+  const [videoStyleGuide, setVideoStyleGuide] = useState(() => deriveVideoStyleGuide());
   const [videoStatus, setVideoStatus] = useState('idle');
   const [videoDownloadUrl, setVideoDownloadUrl] = useState('');
   const [videoError, setVideoError] = useState('');
@@ -967,14 +1068,16 @@ export default function Home() {
     const moodPlan = notificationPlaybook[finalAnalysis.mood] || notificationPlaybook.Meraklı;
     setDailyPlan(moodPlan);
 
+    const styleGuide = deriveVideoStyleGuide(finalAnalysis);
     setVideoScenes(
       createVideoScenes({
         mood: finalAnalysis.mood,
         tags: finalAnalysis.tags,
-        uploads: { coffee, palm, tarotUpload },
+        uploads: { coffee, palm, tarotUpload, tarotDeck },
         keywordHighlights: finalAnalysis.keywordHighlights,
       })
     );
+    setVideoStyleGuide(styleGuide);
 
     setVideoStatus('idle');
     setVideoError('');
@@ -1008,21 +1111,26 @@ export default function Home() {
       }
     };
 
+    const effectiveStyleGuide = videoStyleGuide || deriveVideoStyleGuide(analysis);
+
     const renderStoryboardFallback = async () => {
       if (typeof window === 'undefined' || typeof window.MediaRecorder === 'undefined') {
         throw new Error('Tarayıcınız yerel storyboard videosu üretimini desteklemiyor.');
       }
 
+      const styleGuide = effectiveStyleGuide;
+
       const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
+      canvas.width = 1080;
+      canvas.height = 1920;
       const context = canvas.getContext('2d');
 
       if (!context || typeof canvas.captureStream !== 'function') {
         throw new Error('Canvas yakalama özelliği bu tarayıcıda desteklenmiyor.');
       }
 
-      const stream = canvas.captureStream(30);
+      const stream = canvas.captureStream(24);
+      const frameInterval = 1000 / 24;
       const mimeCandidates = [
         'video/webm;codecs=vp9',
         'video/webm;codecs=vp8',
@@ -1042,21 +1150,46 @@ export default function Home() {
         }
       };
 
-      const particleCount = 90;
-      const particles = Array.from({ length: particleCount }, () => ({
+      const totalDurationMs = 18000;
+      const sceneDuration = totalDurationMs / Math.max(videoScenes.length, 1);
+      const particles = Array.from({ length: 140 }, () => ({
         x: Math.random(),
         y: Math.random(),
         depth: Math.random(),
-        size: Math.random() * 1.8 + 0.4,
+        wobble: Math.random() * Math.PI * 2,
       }));
 
+      const hexToRgba = (hex, alpha = 1) => {
+        const normalized = hex.replace('#', '');
+        const bigint = parseInt(normalized, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+
       const wrapText = (text, startY, fontSize, color, lineHeight, fontWeight = '600', options = {}) => {
+        if (!text) {
+          return startY;
+        }
+        const content = String(text);
+        context.save();
         context.font = `${fontWeight} ${fontSize}px 'Inter', 'Segoe UI', sans-serif`;
         context.fillStyle = color;
         context.textBaseline = 'top';
         context.textAlign = options.align || 'left';
-        const maxWidth = (options.maxWidth || canvas.width) - 200;
-        const words = text.split(' ');
+        if (options.shadowColor) {
+          context.shadowColor = options.shadowColor;
+          context.shadowBlur = options.shadowBlur ?? 0;
+          context.shadowOffsetY = options.shadowOffsetY ?? 0;
+        } else {
+          context.shadowColor = 'transparent';
+          context.shadowBlur = 0;
+          context.shadowOffsetY = 0;
+        }
+        const maxWidth = options.maxWidth ?? canvas.width - 240;
+        const offsetX = options.offsetX ?? 140;
+        const words = content.split(' ');
         let line = '';
         let y = startY;
 
@@ -1064,7 +1197,7 @@ export default function Home() {
           const testLine = line ? `${line} ${word}` : word;
           const { width } = context.measureText(testLine);
           if (width > maxWidth && line) {
-            context.fillText(line, 100, y);
+            context.fillText(line, offsetX, y);
             line = word;
             y += lineHeight;
           } else {
@@ -1072,117 +1205,177 @@ export default function Home() {
           }
 
           if (index === words.length - 1) {
-            context.fillText(line, 100, y);
+            context.fillText(line, offsetX, y);
           }
         });
 
+        context.restore();
         return y + lineHeight;
       };
 
       const drawSceneFrame = (scene, progress, timestamp, delta) => {
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-        const gradientShift = Math.sin(timestamp / 900) * 0.2;
+        context.fillStyle = styleGuide.backdropColor;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
         const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(Math.max(0, 0 + gradientShift), '#0f172a');
-        gradient.addColorStop(Math.min(1, 0.45 + gradientShift), '#312e81');
-        gradient.addColorStop(Math.min(1, 1 + gradientShift), '#831843');
+        gradient.addColorStop(0, hexToRgba(styleGuide.primaryColor, 0.35));
+        gradient.addColorStop(0.6, hexToRgba(styleGuide.accentColor, 0.25));
+        gradient.addColorStop(1, hexToRgba(styleGuide.primaryColor, 0.15));
         context.fillStyle = gradient;
         context.fillRect(0, 0, canvas.width, canvas.height);
 
-        const deltaSeconds = Math.max(delta / 1000, 1 / 60);
+        const rimGradient = context.createRadialGradient(
+          canvas.width / 2,
+          180,
+          60,
+          canvas.width / 2,
+          180,
+          canvas.width
+        );
+        rimGradient.addColorStop(0, hexToRgba(styleGuide.rimLightColor, 0.35));
+        rimGradient.addColorStop(1, 'transparent');
+        context.fillStyle = rimGradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const deltaSeconds = Math.max(delta / 1000, frameInterval / 1000);
         particles.forEach((particle) => {
-          particle.y += deltaSeconds * (0.12 + particle.depth * 0.35);
+          particle.y += deltaSeconds * (0.12 + particle.depth * 0.28);
+          particle.x += Math.sin(timestamp / 1800 + particle.wobble) * 0.0009;
           if (particle.y > 1) {
             particle.y -= 1;
             particle.x = Math.random();
           }
+          if (particle.x > 1) {
+            particle.x -= 1;
+          }
+          if (particle.x < 0) {
+            particle.x += 1;
+          }
           const px = particle.x * canvas.width;
           const py = particle.y * canvas.height;
-          const size = particle.size * (1 + Math.sin(timestamp / 400 + particle.depth * 6) * 0.3);
+          const ellipseWidth = 8 + particle.depth * 22;
+          const squash = 0.65 + Math.sin(timestamp / 600 + particle.wobble) * 0.12;
           context.beginPath();
-          context.fillStyle = `rgba(165, 243, 252, ${0.25 + particle.depth * 0.5})`;
-          context.arc(px, py, size, 0, Math.PI * 2);
+          context.fillStyle = hexToRgba(styleGuide.particleColor, 0.25 + particle.depth * 0.45);
+          context.ellipse(px, py, ellipseWidth, ellipseWidth * squash, 0, 0, Math.PI * 2);
           context.fill();
         });
 
-        const cardOpacity = Math.min(1, progress * 1.15);
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const orbitAngle = timestamp / 2600;
+        const dolly = 1 + Math.sin(progress * Math.PI) * 0.06;
+        const stretch = 1 + Math.sin(timestamp / 750) * 0.05;
+
         context.save();
-        context.globalAlpha = cardOpacity;
-        context.fillStyle = 'rgba(2, 6, 23, 0.78)';
+        context.translate(centerX, centerY);
+        context.scale(dolly * (1 + progress * 0.03), dolly * stretch);
+        context.rotate(Math.sin(orbitAngle) * 0.045);
+        context.translate(-centerX, -centerY);
+
+        const cardX = 120;
+        const cardY = 260;
+        const cardWidth = canvas.width - 240;
+        const cardHeight = canvas.height - 520;
+        const radius = 54;
+
+        context.save();
+        context.shadowColor = hexToRgba(styleGuide.rimLightColor, 0.55);
+        context.shadowBlur = 48;
+        context.fillStyle = 'rgba(8, 15, 40, 0.78)';
         context.beginPath();
-        const borderRadius = 36;
-        const cardX = 60;
-        const cardY = 60;
-        const cardWidth = canvas.width - 120;
-        const cardHeight = canvas.height - 120;
-        context.moveTo(cardX + borderRadius, cardY);
-        context.lineTo(cardX + cardWidth - borderRadius, cardY);
-        context.quadraticCurveTo(cardX + cardWidth, cardY, cardX + cardWidth, cardY + borderRadius);
-        context.lineTo(cardX + cardWidth, cardY + cardHeight - borderRadius);
-        context.quadraticCurveTo(
-          cardX + cardWidth,
-          cardY + cardHeight,
-          cardX + cardWidth - borderRadius,
-          cardY + cardHeight
-        );
-        context.lineTo(cardX + borderRadius, cardY + cardHeight);
-        context.quadraticCurveTo(cardX, cardY + cardHeight, cardX, cardY + cardHeight - borderRadius);
-        context.lineTo(cardX, cardY + borderRadius);
-        context.quadraticCurveTo(cardX, cardY, cardX + borderRadius, cardY);
+        context.moveTo(cardX + radius, cardY);
+        context.lineTo(cardX + cardWidth - radius, cardY);
+        context.quadraticCurveTo(cardX + cardWidth, cardY, cardX + cardWidth, cardY + radius);
+        context.lineTo(cardX + cardWidth, cardY + cardHeight - radius);
+        context.quadraticCurveTo(cardX + cardWidth, cardY + cardHeight, cardX + cardWidth - radius, cardY + cardHeight);
+        context.lineTo(cardX + radius, cardY + cardHeight);
+        context.quadraticCurveTo(cardX, cardY + cardHeight, cardX, cardY + cardHeight - radius);
+        context.lineTo(cardX, cardY + radius);
+        context.quadraticCurveTo(cardX, cardY, cardX + radius, cardY);
         context.closePath();
         context.fill();
-        context.restore();
-
-        const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-        const easeOut = easeOutCubic(Math.min(progress * 1.1, 1));
-        const slideOffset = (1 - easeOut) * 80;
-
-        context.save();
-        context.globalAlpha = Math.min(1, progress * 1.4);
-        const titleY = 140 + slideOffset;
-        const visualY = wrapText(scene.title, titleY, 46, '#bfdbfe', 54, '700');
-        const narrationStart = wrapText(scene.visual, visualY + 20, 28, '#e2e8f0', 38, '500');
-        wrapText(scene.narration, narrationStart + 20, 30, '#ddd6fe', 40, '500');
-        context.restore();
-
-        const orbitX = canvas.width - 220;
-        const orbitY = 200;
-        const orbitRadius = 70 + easeOut * 50;
-        context.save();
-        context.strokeStyle = 'rgba(129, 140, 248, 0.35)';
-        context.lineWidth = 3;
-        context.beginPath();
-        context.ellipse(orbitX, orbitY, orbitRadius, orbitRadius * 0.65, 0, 0, Math.PI * 2);
+        context.shadowColor = 'transparent';
+        context.shadowBlur = 0;
+        context.lineWidth = 6;
+        context.strokeStyle = hexToRgba(styleGuide.rimLightColor, 0.9);
         context.stroke();
-        const orbAngle = timestamp / 420;
-        const orbX = orbitX + Math.cos(orbAngle) * orbitRadius;
-        const orbY = orbitY + Math.sin(orbAngle) * orbitRadius * 0.65;
-        const orbSize = 10 + easeOut * 8;
-        const orbGradient = context.createRadialGradient(orbX, orbY, 0, orbX, orbY, orbSize * 1.6);
-        orbGradient.addColorStop(0, 'rgba(244, 114, 182, 0.95)');
-        orbGradient.addColorStop(1, 'rgba(244, 114, 182, 0)');
+
+        const headerY = cardY + 90;
+        const titleY = wrapText(scene.title, headerY, 64, styleGuide.primaryColor, 74, '800', {
+          maxWidth: cardWidth - 140,
+          offsetX: cardX + 70,
+          shadowColor: hexToRgba('#0f172a', 0.25),
+          shadowBlur: 16,
+        });
+        const topicY = wrapText(`Konu: ${styleGuide.topic}`, titleY + 10, 36, hexToRgba(styleGuide.accentColor, 0.95), 48, '600', {
+          maxWidth: cardWidth - 140,
+          offsetX: cardX + 70,
+          shadowColor: hexToRgba('#0f172a', 0.2),
+          shadowBlur: 12,
+        });
+        const visualY = wrapText(scene.visual, topicY + 24, 34, '#e2e8f0', 46, '500', {
+          maxWidth: cardWidth - 140,
+          offsetX: cardX + 70,
+          shadowColor: hexToRgba('#0f172a', 0.18),
+          shadowBlur: 10,
+        });
+        wrapText(scene.narration, visualY + 20, 34, hexToRgba(styleGuide.accentColor, 0.9), 46, '500', {
+          maxWidth: cardWidth - 140,
+          offsetX: cardX + 70,
+          shadowColor: hexToRgba('#0f172a', 0.18),
+          shadowBlur: 10,
+        });
+
+        context.restore();
+        context.restore();
+
+        context.save();
+        const orbitRadius = 140 + Math.sin(progress * Math.PI) * 18;
+        context.strokeStyle = hexToRgba(styleGuide.orbitColor, 0.4);
+        context.lineWidth = 5;
+        context.beginPath();
+        context.ellipse(centerX, 320, orbitRadius * 1.1, orbitRadius * 0.65, 0, 0, Math.PI * 2);
+        context.stroke();
+        const orbAngle = timestamp / 1500;
+        const orbX = centerX + Math.cos(orbAngle) * orbitRadius * 0.9;
+        const orbY = 320 + Math.sin(orbAngle) * orbitRadius * 0.55;
+        const orbScale = 22 + Math.sin(timestamp / 500) * 6;
+        const orbGradient = context.createRadialGradient(orbX, orbY, 0, orbX, orbY, orbScale * 2.2);
+        orbGradient.addColorStop(0, hexToRgba(styleGuide.accentColor, 0.85));
+        orbGradient.addColorStop(1, hexToRgba(styleGuide.accentColor, 0));
         context.fillStyle = orbGradient;
         context.beginPath();
-        context.arc(orbX, orbY, orbSize * 1.6, 0, Math.PI * 2);
+        context.ellipse(orbX, orbY, orbScale * 1.4, orbScale, 0, 0, Math.PI * 2);
         context.fill();
         context.restore();
 
         context.save();
-        context.globalAlpha = Math.min(1, progress * 1.3);
-        const progressWidth = (canvas.width - 240) * Math.max(progress, 0.08);
-        context.fillStyle = 'rgba(14, 116, 144, 0.35)';
-        context.fillRect(120, canvas.height - 140, canvas.width - 240, 8);
-        const gradientBar = context.createLinearGradient(120, 0, 120 + progressWidth, 0);
-        gradientBar.addColorStop(0, '#22d3ee');
-        gradientBar.addColorStop(1, '#f472b6');
-        context.fillStyle = gradientBar;
-        context.fillRect(120, canvas.height - 140, progressWidth, 8);
-        context.font = "500 22px 'Inter', 'Segoe UI', sans-serif";
-        context.fillStyle = '#f1f5f9';
-        context.fillText('dreamoracle.space', 120, canvas.height - 120);
-        context.fillStyle = '#f472b6';
-        context.fillText(`Mood: ${analysis.mood}`, 120, canvas.height - 90);
+        const bounce = 1 + Math.sin(timestamp / 420) * 0.15;
+        context.translate(centerX, canvas.height - 220);
+        context.scale(bounce, 1 / bounce);
+        const baseWidth = canvas.width - 260;
+        const barHeight = 20;
+        context.fillStyle = hexToRgba(styleGuide.primaryColor, 0.18);
+        context.fillRect(-baseWidth / 2, -barHeight / 2, baseWidth, barHeight);
+        const progressWidth = Math.max(progress, 0.04) * baseWidth;
+        const progressGradient = context.createLinearGradient(-baseWidth / 2, 0, -baseWidth / 2 + progressWidth, 0);
+        progressGradient.addColorStop(0, hexToRgba(styleGuide.primaryColor, 0.8));
+        progressGradient.addColorStop(1, hexToRgba(styleGuide.accentColor, 0.9));
+        context.fillStyle = progressGradient;
+        context.fillRect(-baseWidth / 2, -barHeight / 2, progressWidth, barHeight);
+        context.restore();
+
+        context.save();
+        context.font = "600 32px 'Inter', 'Segoe UI', sans-serif";
+        context.fillStyle = hexToRgba(styleGuide.textColor, 0.9);
+        context.textAlign = 'center';
+        context.shadowColor = hexToRgba('#0f172a', 0.2);
+        context.shadowBlur = 14;
+        context.fillText('dreamoracle.space • 18sn • 24fps • 9:16', centerX, canvas.height - 140);
+        context.fillText('Neşeli jingle ile tamamla', centerX, canvas.height - 90);
         context.restore();
       };
 
@@ -1193,7 +1386,7 @@ export default function Home() {
       const hasRaf = typeof window.requestAnimationFrame === 'function';
       const scheduleFrame = hasRaf
         ? (fn) => window.requestAnimationFrame(fn)
-        : (fn) => window.setTimeout(() => fn(now()), 16);
+        : (fn) => window.setTimeout(() => fn(now()), frameInterval);
       const cancelFrame = hasRaf
         ? (id) => window.cancelAnimationFrame(id)
         : (id) => window.clearTimeout(id);
@@ -1202,7 +1395,7 @@ export default function Home() {
 
       const animateScene = (scene) =>
         new Promise((resolve) => {
-          const duration = 3200;
+          const duration = Math.max(sceneDuration, 1000);
           let startTimestamp = null;
           let lastTimestamp = null;
 
@@ -1211,7 +1404,7 @@ export default function Home() {
               startTimestamp = timestamp;
             }
             const elapsed = timestamp - startTimestamp;
-            const delta = lastTimestamp === null ? 16 : timestamp - lastTimestamp;
+            const delta = lastTimestamp === null ? frameInterval : timestamp - lastTimestamp;
             lastTimestamp = timestamp;
             const progress = Math.min(elapsed / duration, 1);
             drawSceneFrame(scene, progress, timestamp, delta);
@@ -1254,8 +1447,8 @@ export default function Home() {
       recorder.start();
       for (const scene of videoScenes) {
         await animateScene(scene);
-        drawSceneFrame(scene, 1, now(), 16);
-        await new Promise((resolve) => window.setTimeout(resolve, 160));
+        drawSceneFrame(scene, 1, now(), frameInterval);
+        await new Promise((resolve) => window.setTimeout(resolve, 240));
       }
       recorder.stop();
 
@@ -1288,6 +1481,7 @@ export default function Home() {
           scenes: videoScenes,
           keywordHighlights: analysis.keywordHighlights,
           selectedServices,
+          styleGuide: effectiveStyleGuide,
         }),
       });
 
@@ -1325,8 +1519,8 @@ export default function Home() {
             applyBlobResult(fallbackResult);
             setVideoNotice(
               data?.reason
-                ? `${data.reason} Yerel storyboard animasyonu üretildi.`
-                : 'Yerel storyboard animasyonu üretildi.'
+                ? `${data.reason} 18sn, 24fps pastel toon storyboard animasyonu üretildi.`
+                : '18sn, 24fps pastel toon storyboard animasyonu üretildi.'
             );
             setVideoError('');
             return;
@@ -1349,12 +1543,12 @@ export default function Home() {
 
       const fallbackResult = await renderStoryboardFallback();
       applyBlobResult(fallbackResult);
-      setVideoNotice('AI video servisi pasif. Yerel storyboard animasyonu üretildi.');
+      setVideoNotice('AI video servisi pasif. 18sn, 24fps pastel toon storyboard animasyonu üretildi.');
     } catch (error) {
       try {
         const fallbackResult = await renderStoryboardFallback();
         applyBlobResult(fallbackResult);
-        setVideoNotice('AI video servisine ulaşılamadı. Yerel storyboard animasyonu üretildi.');
+        setVideoNotice('AI video servisine ulaşılamadı. 18sn, 24fps pastel toon storyboard animasyonu üretildi.');
         setVideoError('');
       } catch (fallbackError) {
         console.error(fallbackError);
@@ -1540,6 +1734,48 @@ export default function Home() {
     if (activeCategory === 'video') {
       return hasAnalysis ? (
         <div className="mt-4 space-y-3 text-sm text-slate-300">
+          {videoStyleGuide && (
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+              <p className="font-semibold text-white">Video stil rehberi</p>
+              <p className="mt-1 text-xs text-slate-400">
+                18 saniyelik, 24fps 3D toon/cel-shaded akış pastel renk paletiyle hazırlanır.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">Konu</p>
+                  <p className="mt-1 text-sm text-white">{videoStyleGuide.topic}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">Ana Renk</p>
+                  <div className="mt-1 flex items-center gap-2 text-sm text-white">
+                    <span
+                      className="inline-block h-5 w-5 rounded-full border border-white/20"
+                      style={{ backgroundColor: videoStyleGuide.primaryColor }}
+                    />
+                    {videoStyleGuide.primaryColorName}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">Vurgu</p>
+                  <div className="mt-1 flex items-center gap-2 text-sm text-white">
+                    <span
+                      className="inline-block h-5 w-5 rounded-full border border-white/20"
+                      style={{ backgroundColor: videoStyleGuide.accentColor }}
+                    />
+                    {videoStyleGuide.accentColorName}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">Format</p>
+                  <ul className="mt-1 space-y-1 text-sm text-white">
+                    <li>Aspect 9:16</li>
+                    <li>18sn • 24fps</li>
+                    <li>Neşeli kısa jingle</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
             <p className="font-semibold text-white">Storyboard sahneleri</p>
             <ul className="mt-3 space-y-2 text-sm text-slate-300">
@@ -1671,6 +1907,7 @@ export default function Home() {
     videoFileName,
     videoStatus,
     videoScenes,
+    videoStyleGuide,
     isAnalyzing,
     voiceStatus,
   ]);

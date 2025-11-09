@@ -5,7 +5,21 @@ async function sleep(duration) {
   await new Promise((resolve) => setTimeout(resolve, duration));
 }
 
-function buildVideoPrompt({ mood, tags, synopsis, scenes, keywordHighlights, selectedServices }) {
+function buildVideoPrompt({
+  mood,
+  tags,
+  synopsis,
+  scenes,
+  keywordHighlights,
+  selectedServices,
+  styleGuide = {},
+}) {
+  const topic = styleGuide.topic || (Array.isArray(tags) && tags[0]) || 'DreamOracle rüyası';
+  const primaryName = styleGuide.primaryColorName || 'pastel lavanta';
+  const primaryHex = styleGuide.primaryColor || '#c7d2fe';
+  const accentName = styleGuide.accentColorName || 'pastel fuşya';
+  const accentHex = styleGuide.accentColor || '#f9a8d4';
+
   const moodText = mood ? `Mood: ${mood}.` : '';
   const tagText = Array.isArray(tags) && tags.length ? `Temalar: ${tags.join(', ')}.` : '';
   const highlightText = Array.isArray(keywordHighlights) && keywordHighlights.length
@@ -30,12 +44,31 @@ function buildVideoPrompt({ mood, tags, synopsis, scenes, keywordHighlights, sel
 
   const synopsisText = synopsis ? `Özet: ${synopsis}.` : '';
 
-  return `DreamOracle markası için 16:9 sinematik bir animasyon video oluştur.
-${moodText} ${tagText} ${highlightText}
-${servicesText}
-${synopsisText}
-Sahneleri sırayla uygula: ${sceneText}
-Neon ışıklar, parçacık alanları, yumuşak kamera geçişleri ve kozmik partiküller kullan. Markayı dreamoracle.space logosu ile bitir.`;
+  const directives = [
+    'DreamOracle markası için profesyonel animasyon storyboard videosu üret.',
+    'TÜR: 3D toon/cel-shaded, yüksek okunabilirlik.',
+    `KONU: ${topic}.`,
+    'MODELLEME: Basit low-poly formlar, toon shader, yumuşak ışık.',
+    'KAMERA: Dolly-in/out ve yavaş orbit; derin alan bulanıklığı kullanma.',
+    'HAREKET: Squash & stretch orta seviyede, fizik abartılı ama kontrollü.',
+    `RENK PALETİ: Pastel; ana renk ${primaryName} (${primaryHex}), vurgu ${accentName} (${accentHex}).`,
+    'IŞIK: Belirgin rim light, sert gölge yok.',
+    'SÜRE: 18 saniye. FPS: 24. ASPECT: 9:16 dikey.',
+    'METİN: Büyük başlıklar, çok hafif drop-shadow; tüm metinler Türkçe ve okunaklı.',
+    'SES: Neşeli kısa jingle eşlik etsin.',
+    moodText,
+    tagText,
+    highlightText,
+    servicesText,
+    synopsisText,
+    `Sahneleri sırayla uygula: ${sceneText}`,
+    'Her sahnede DreamOracle markası, yüklenen görseller ve fal hizmetleri organik şekilde bağlansın.',
+    'NEGATİF: fotogerçekçi materyal (metal/deri/insan cildi), noise, filmik lens efektleri, watermark.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  return directives;
 }
 
 async function pollReplicate(predictionUrl, token) {
@@ -88,10 +121,26 @@ export default async function handler(req, res) {
     });
   }
 
-  const { mood, tags, synopsis, scenes, keywordHighlights, selectedServices } = req.body || {};
+  const {
+    mood,
+    tags,
+    synopsis,
+    scenes,
+    keywordHighlights,
+    selectedServices,
+    styleGuide,
+  } = req.body || {};
 
   try {
-    const prompt = buildVideoPrompt({ mood, tags, synopsis, scenes, keywordHighlights, selectedServices });
+    const prompt = buildVideoPrompt({
+      mood,
+      tags,
+      synopsis,
+      scenes,
+      keywordHighlights,
+      selectedServices,
+      styleGuide,
+    });
 
     const startResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
@@ -103,8 +152,18 @@ export default async function handler(req, res) {
         version: replicateModel,
         input: {
           prompt,
-          aspect_ratio: '16:9',
-          negative_prompt: 'deformed, glitch, kötü kalite, yazı blokları, watermark, durağan sahne',
+          aspect_ratio: '9:16',
+          negative_prompt: [
+            'photorealistic materials',
+            'realistic skin',
+            'metal reflections',
+            'noise',
+            'film grain',
+            'lens flare',
+            'watermark',
+            'low detail',
+            'static scene',
+          ].join(', '),
           guidance_scale: Number(process.env.REPLICATE_GUIDANCE_SCALE) || 12,
         },
       }),
