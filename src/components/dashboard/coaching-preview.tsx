@@ -21,8 +21,8 @@ export function CoachingPreview() {
           <h3 className="text-xl font-semibold">Yaşam Koçluğu</h3>
           <p className="text-sm text-muted-foreground">Her sabah 09:00'da kişisel motivasyon bildirimi.</p>
         </div>
-        <Button asChild variant="outline">
-          <a href="/coach">Ayrıntılar</a>
+        <Button variant="outline" href="/coach">
+          Ayrıntılar
         </Button>
       </div>
       <p className="text-sm leading-relaxed text-muted-foreground">{message}</p>

@@ -1,74 +1,54 @@
 # DreamOracle Platform
 
-DreamOracle is a Next.js 14 platform for AI-assisted dream interpretation, tarot and fortune readings, subscription video generation, and daily coaching.
+DreamOracle is a Next.js 14 experience for collecting dreams (metin + ses), üretmek yorumlar, fal modülleri ve pastel animasyon storyboardları. Platform TRY fiyatlarını gösterirken yaklaşık EUR karşılıklarını SSR sırasında hesaplar, görsel yüklemelerle kahve/el/tarot analizlerini simüle eder ve günlük yaşam koçluğu mesajları sunar.
 
-## Stack
-- **Web**: Next.js 14 App Router, TypeScript, Tailwind CSS, shadcn/ui, Zustand, next-intl
-- **API**: Next.js Route Handlers, OpenAPI docs at `/api/docs`
-- **Database**: PostgreSQL + Prisma
-- **Queue**: BullMQ + Redis
-- **AI**: OpenAI (GPT, Whisper), Remotion + FFmpeg for video rendering
-- **Auth**: NextAuth (Email, OAuth), JWT with RBAC tiers
-- **Payments**: Stripe subscriptions (TRY)
-- **Notifications**: Resend email, Web Push, optional Telegram
-- **Observability**: pino logger + Sentry
+## Mimari
+- **Web**: Next.js 14 App Router, React 18, Tailwind CSS (özel utility'ler)
+- **Veri Katmanı**: Sunucu belleğinde tutulan `lib/data-store` (demo amaçlı). Gerçek dağıtımda veritabanı ile değiştirilebilir.
+- **AI / Video**: Yerel heuristik analizler, storyboard üretimi, kuyruk simülasyonları (`lib/ai.ts`, `workers/queue.ts`).
+- **Fiyatlandırma**: TRY→EUR yaklaşık dönüşümü (`lib/fx.ts`) ve SSR fiyat kartları.
+- **Uyumluluk**: KVKK/GDPR uyarıları, veriyi indir/sil hatırlatıcıları, 18+ bilgilendirme metinleri.
 
-## Getting Started
-1. Install dependencies
-   ```bash
-   npm install
-   ```
-2. Copy environment template
-   ```bash
-   cp .env.example .env.local
-   ```
-   Update secrets: database, Stripe, OpenAI/Whisper, Supabase, Redis.
-3. Apply database schema
-   ```bash
-   npx prisma migrate dev
-   ```
-4. Run the development server
+## Kurulum
+1. Bağımlılıklar depo içinde stub olarak bulunduğundan ayrıca `npm install` çalıştırmanız gerekmez. (Ortamda `npm install` dış ağ erişimi gerektirdiğinden 403 dönebilir.)
+2. Geliştirme sunucusu:
    ```bash
    npm run dev
    ```
-5. Visit [http://localhost:3000](http://localhost:3000)
+3. Üretim derlemesi:
+   ```bash
+   npm run build
+   ```
+   Derleme sırasında Next.js, TypeScript paketini yeniden kurmaya çalışabilir. Dış ağ engelliyse bu adım uyarıyla sonlanır; yapı çıktıları yine de `.next/` altında oluşur.
 
-### Background Workers
-Render/queue jobs and daily notifications use BullMQ workers that can run via Docker/Render/Fly. Start locally with:
-```bash
-node -r dotenv/config ./src/workers/queue.ts
-```
+## Önemli Komutlar
+- `npm run dev` – geliştirme sunucusu
+- `npm run build` – üretim derlemesi (TypeScript bağımlılığı olmadan çalışacak şekilde yapılandırılmıştır)
+- `npm run start` – üretim sunucusu
+- `npm run lint` – Next.js ESLint
 
-## Testing the FX Fallback
-To ensure EUR approximations work without the external API:
-```bash
-FX_SOURCE_URL=https://invalid npm run dev
-```
-The pricing page will fall back to the `FX_TRY_EUR_FALLBACK` rate.
+## Özellikler
+- Rüya toplama paneli (metin + 100 MB ses yükleme limiti)
+- AI yorum kartı: özet, semboller, öneriler, mood etiketleri
+- Pastel toon video storyboard planı ve mp4 kuyruğa alma simülasyonu
+- Tarot / Astro / El / Kahve falı formları, görsel yükleme desteği, özet listesi
+- TRY / ≈EUR fiyatlandırma kartları, Free/Premium/Pro limitleri
+- Günlük 09:00 motivasyon mesajı, test bildirimi uç noktası
+- Admin panelinde kuyruk/ log/ webhook özetleri
+- OpenAPI özeti `/tr/docs` sayfasında JSON olarak görüntülenir
 
-## Scripts
-- `npm run lint` – ESLint
-- `npm run prisma:generate` – generate Prisma client
-- `npm run prisma:migrate` – run database migrations
-- `npm run prisma:studio` – Prisma Studio
+## Veri & Kuyruk Simülasyonu
+Gerçek veritabanı yerine bellek içi kayıtlar kullanılır (`lib/data-store.ts`).
+- `createDream`, `saveInterpretation`, `createVideoJob` vb. fonksiyonlar API uç noktaları tarafından çağrılır.
+- `workers/queue.ts` dosyası, yorum ve video işlemlerinin nasıl ele alınacağını örnekler.
 
-## Directory Overview
-```
-src/
-  app/            # App Router routes and layouts
-  components/     # UI and dashboard widgets
-  lib/            # Server utilities (AI, FX, Prisma, logging)
-  stores/         # Zustand stores
-  workers/        # BullMQ processors
-public/locales/   # i18n dictionaries (tr/en)
-prisma/schema.prisma
-```
+## FX Çevirisi
+`lib/fx.ts` dosyası TRY tutarını formatlar ve EUR yaklaşık değerini hesaplar. Gerçek ortamda ENV değerleriyle günlük kur çekilebilir; demo modunda varsayılan fallback oranı kullanılır.
 
-## Deployment
-- Web/API deploy to Vercel (Edge friendly handlers)
-- Worker containers to Render/Fly.io with Dockerfile
-- Configure Stripe webhook to `/api/stripe/webhook`
-- Ensure Redis, PostgreSQL, Supabase storage buckets are provisioned.
+## Geliştirme Notları
+- UI bileşenleri (`components/ui/*`) saf React + Tailwind sınıflarıyla yazıldı; Radix, Zustand vb. üçüncü parti bağımlılıklar kaldırıldı.
+- Logger basitleştirilmiş `console` sarmalayıcısıdır.
+- Swagger UI yerine `/api/docs` çıktısı SSR tarafında `<pre>` bloğu ile sunulur.
 
-## Compliance
-DreamOracle surfaces ethical disclaimers (entertainment only), offers data export/deletion, and restricts usage to 18+ audiences to align with KVKK/GDPR.
+## Gelecek Adımlar
+Gerçek entegrasyonlar (Prisma, NextAuth, Stripe vb.) için bu demo temel alınarak gerekli SDK ve servisler eklenmelidir.

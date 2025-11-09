@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getVideoJob } from "@/lib/data-store";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const job = await prisma.videoJob.findUnique({ where: { id: params.id } });
+  const job = getVideoJob(params.id);
   if (!job) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json(job);
 }

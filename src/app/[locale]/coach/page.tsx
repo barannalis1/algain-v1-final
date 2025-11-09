@@ -1,12 +1,12 @@
 import { generateCoachingPrompt } from "@/lib/ai";
+import { countUsers } from "@/lib/data-store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { prisma } from "@/lib/prisma";
 
 export default async function CoachPage() {
   const mood = "hopeful";
   const message = await generateCoachingPrompt(mood);
-  const users = await prisma.user.count();
+  const users = countUsers();
 
   return (
     <main className="container py-12 space-y-8">

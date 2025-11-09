@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createReading } from "@/lib/data-store";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const theme = `Bugünün teması: ${body.birthplace || "İstanbul"} gökyüzünde cesaret.`;
-  const caution = "Sabırlı ol, acele karar verme.";
-  const opportunity = "Sezgisel bağlantılar kur ve yeni işbirliği fırsatlarına açık ol.";
-  const result = { theme, caution, opportunity };
-  const reading = await prisma.reading.create({
-    data: {
-      userId: "demo-user",
-      type: "ASTRO",
-      inputJson: body,
-      images: [],
-      resultJson: result,
-    },
+  const body = await request.json().catch(() => ({}));
+  const result = {
+    theme: "Günlük odak: iç denge",
+    attention: "Sabah saatlerinde iletişim kanallarını temizle",
+    opportunity: "Saat 17:00 sonrası yaratıcı fikirlerin kabarması",
+    ritual: "Çam tütsüsü yak ve kısa bir meditasyon yap",
+  };
+  const reading = createReading({
+    userId: "demo-user",
+    type: "ASTRO",
+    inputJson: body,
+    images: [],
+    resultJson: result,
   });
-  return NextResponse.json({ id: reading.id, ...result });
+  return NextResponse.json({ ...result, id: reading.id });
 }

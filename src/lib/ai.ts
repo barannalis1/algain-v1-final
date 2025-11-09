@@ -1,9 +1,4 @@
 import { logger } from "@/lib/logger";
-import OpenAI from "openai";
-
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : null;
 
 export type DreamAnalysis = {
   summary: string;
@@ -29,21 +24,6 @@ const fallbackPalettes = [
 ];
 
 export async function analyzeDream(text: string): Promise<DreamAnalysis> {
-  if (openai) {
-    try {
-      const completion = await openai.responses.create({
-        model: "gpt-4.1-mini",
-        input: `Rüyayı yorumla ve JSON döndür. Alanlar: summary, symbols(3), advice(3), tone(calm|positive|neutral), mood tek kelime, storyboard(4 sahne; title, subtitle, palette[3 pastel hex], animation flat|kinetic|rotoscope, duration saniye). Rüya: ${text}`,
-        response_format: { type: "json_object" },
-      });
-      const message = completion.output_text;
-      const parsed = JSON.parse(message) as DreamAnalysis;
-      return parsed;
-    } catch (error) {
-      logger.warn({ error }, "openai analyze fallback");
-    }
-  }
-
   const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
   const mood = sentences.some((s) => /korku|fear|dark/i.test(s)) ? "mystic" : "hopeful";
   const summary = sentences.slice(0, 2).join(" ") || text.slice(0, 160);
@@ -98,16 +78,5 @@ export function drawTarotSpread(type: "three" | "celtic" = "three") {
 }
 
 export async function generateCoachingPrompt(mood: string) {
-  if (openai) {
-    try {
-      const completion = await openai.responses.create({
-        model: "gpt-4.1-mini",
-        input: `Mood: ${mood}. Sabah 09:00 motivasyon maili için 2 paragraf pozitif mesaj yaz.`,
-      });
-      return completion.output_text.trim();
-    } catch (error) {
-      logger.warn({ error }, "openai coaching fallback");
-    }
-  }
   return `Sabahına ${mood} bir tonda başla. Üç derin nefes al, tren düdüğünün cesaretini gün boyu taşı. Yapmak istediğin tek küçük şeyi seç ve bugün onun için ilk adımı at.`;
 }

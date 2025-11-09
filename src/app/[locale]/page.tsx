@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,11 +26,11 @@ export default function LandingPage() {
                 çözümler, GPT destekli yorumunu hemen sunar ve Remotion ile 18 saniyelik 2D animasyon mini filmler üretir.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button asChild size="lg">
-                  <Link href="app">Panoya Git</Link>
+                <Button size="lg" href="/app">
+                  Panoya Git
                 </Button>
-                <Button variant="outline" asChild size="lg">
-                  <Link href="#demo">Canlı Akışa Bak</Link>
+                <Button variant="outline" size="lg" href="#demo">
+                  Canlı Akışa Bak
                 </Button>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-white/70">
@@ -108,8 +107,8 @@ export default function LandingPage() {
               <p>Admin panelinden abonelikler, kuyruklar, şablonlar ve günlük motivasyon mesajları yönetilebilir.</p>
             </CardContent>
             <CardFooter>
-              <Button variant="link" asChild>
-                <Link href="docs">OpenAPI & Swagger</Link>
+              <Button variant="link" href="/docs">
+                OpenAPI & Swagger
               </Button>
             </CardFooter>
           </Card>
@@ -126,8 +125,8 @@ export default function LandingPage() {
               <p>Remotion şablonları 9:16 ve 16:9 formatta H.264/AAC mp4 olarak dışa aktarılır.</p>
             </CardContent>
             <CardFooter>
-              <Button variant="link" asChild>
-                <Link href="pricing">Fiyatlandırma sayfası</Link>
+              <Button variant="link" href="/pricing">
+                Fiyatlandırma sayfası
               </Button>
             </CardFooter>
           </Card>

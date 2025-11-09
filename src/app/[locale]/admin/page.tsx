@@ -1,14 +1,14 @@
-import { prisma } from "@/lib/prisma";
+import { countInterpretations, countVideoJobs, listWebhookLogs } from "@/lib/data-store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminPage() {
   const queues = [
-    { name: "asr", size: await prisma.videoJob.count({ where: { status: "QUEUED" } }) },
-    { name: "interpret", size: await prisma.interpretation.count() },
-    { name: "render", size: await prisma.videoJob.count({ where: { status: "RENDERING" } }) },
+    { name: "asr", size: countVideoJobs("QUEUED") },
+    { name: "interpret", size: countInterpretations() },
+    { name: "render", size: countVideoJobs("RENDERING") },
   ];
-  const logs = await prisma.webhookLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 });
+  const logs = listWebhookLogs(10);
 
   return (
     <main className="container py-12 space-y-8">

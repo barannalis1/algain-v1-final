@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { countUsers, countDreams, countVideoJobs } from "@/lib/data-store";
 
 export async function GET() {
-  const [users, dreams, videos] = await Promise.all([
-    prisma.user.count(),
-    prisma.dream.count(),
-    prisma.videoJob.count(),
-  ]);
+  const users = countUsers();
+  const dreams = countDreams();
+  const videos = countVideoJobs();
   return NextResponse.json({ users, dreams, videos });
 }

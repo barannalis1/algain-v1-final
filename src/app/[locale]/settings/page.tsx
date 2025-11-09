@@ -1,11 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { prisma } from "@/lib/prisma";
+import { listUserTimezones } from "@/lib/data-store";
 
 export default async function SettingsPage() {
   const locales = ["tr", "en"];
-  const tzs = await prisma.user.findMany({ select: { tz: true }, distinct: ["tz"], take: 5 });
+  const tzs = listUserTimezones(5);
 
   return (
     <main className="container py-12 space-y-8">

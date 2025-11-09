@@ -1,17 +1,30 @@
-"use client";
+import { Suspense } from "react";
 
-import dynamic from "next/dynamic";
-import "swagger-ui-react/swagger-ui.css";
+async function fetchSpec() {
+  const res = await fetch("/api/docs", { cache: "no-store" });
+  if (!res.ok) {
+    return { error: "Spec unavailable" };
+  }
+  return res.json();
+}
 
-const SwaggerUI = dynamic(() => import("swagger-ui-react"), { ssr: false });
+async function SpecViewer() {
+  const spec = await fetchSpec();
+  return (
+    <pre className="rounded-2xl bg-muted p-6 text-xs overflow-x-auto whitespace-pre-wrap">
+      {JSON.stringify(spec, null, 2)}
+    </pre>
+  );
+}
 
 export default function DocsPage() {
-  const specUrl = "/api/docs";
   return (
-    <main className="container py-12">
-      <div className="rounded-3xl border border-border bg-background p-4">
-        <SwaggerUI url={specUrl} docExpansion="list" />
-      </div>
+    <main className="container py-12 space-y-6">
+      <h1 className="text-3xl font-semibold">OpenAPI Özeti</h1>
+      <Suspense fallback={<div className="h-40 rounded-2xl bg-muted animate-pulse" /> }>
+        {/* @ts-expect-error Async Server Component */}
+        <SpecViewer />
+      </Suspense>
     </main>
   );
 }

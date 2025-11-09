@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
 :root {
   --background: 240 24% 7%;
   --foreground: 0 0% 100%;
@@ -27,29 +28,20 @@
 }
 
 body {
-  @apply min-h-screen bg-background text-foreground font-sans;
+  min-height: 100vh;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 }
 
-.btn {
-  @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-}
-
-.btn-primary {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90;
-}
-
-.btn-outline {
-  @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
-}
-
-.card {
-  @apply rounded-3xl border border-border bg-card shadow-sm;
-}
-
-.badge {
-  @apply inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide;
-}
-
+@layer components {
 input[type="file"]::-webkit-file-upload-button {
-  @apply btn btn-outline mr-4;
+  border: 1px solid hsl(var(--input));
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
 }

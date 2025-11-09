@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { listReadings } from "@/lib/data-store";
 
 export async function GET() {
-  const items = await prisma.reading.findMany({
-    select: { id: true, type: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  });
+  const items = listReadings(6).map((item) => ({
+    id: item.id,
+    type: item.type,
+    createdAt: item.createdAt,
+  }));
   return NextResponse.json({ items });
 }

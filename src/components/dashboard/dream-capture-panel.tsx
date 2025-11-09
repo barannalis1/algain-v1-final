@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSessionStore } from "@/stores/use-session-store";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -34,16 +33,70 @@ async function requestVideo(id: string) {
   return res.json();
 }
 
+type ScenePlan = {
+  title: string;
+  subtitle: string;
+  palette: string[];
+  animation: string;
+  duration: number;
+};
+
+type DreamState = {
+  id?: string;
+  text: string;
+  tags: string[];
+  audioUrl?: string;
+  transcript?: string;
+  mood?: string;
+  analysis?: {
+    summary: string;
+    symbols: string[];
+    advice: string[];
+    tone: string;
+    videoPlan?: ScenePlan[];
+  };
+  services: {
+    tarot: boolean;
+    astro: boolean;
+    palm: boolean;
+    coffee: boolean;
+  };
+  video?: {
+    status: "idle" | "queued" | "rendering" | "ready" | "error";
+    template?: string;
+    aspect?: string;
+    fps?: number;
+    url?: string;
+    thumb?: string;
+    error?: string;
+  };
+};
+
+const initialDream: DreamState = {
+  text: "",
+  tags: [],
+  services: {
+    tarot: true,
+    astro: true,
+    palm: false,
+    coffee: false,
+  },
+};
+
 type Props = {
   compact?: boolean;
 };
 
 export function DreamCapturePanel({ compact }: Props) {
-  const { dream, updateDream } = useSessionStore();
+  const [dream, setDream] = useState<DreamState>(initialDream);
   const [activeTab, setActiveTab] = useState("text");
   const [audioFile, setAudioFile] = useState<File | undefined>();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const updateDream = (data: Partial<DreamState>) => {
+    setDream((prev) => ({ ...prev, ...data }));
+  };
 
   const handleSubmit = () => {
     if (!dream.text && !audioFile) {

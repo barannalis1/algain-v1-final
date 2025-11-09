@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { labelTryWithEur } from "@/lib/fx";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -56,8 +55,8 @@ async function PricingCards() {
         Tutarlar bilgilendirme amaçlı yaklaşık EUR karşılığıyla gösterilir; tahsilat TRY ile yapılır.
       </p>
       <div className="md:col-span-3 text-center">
-        <Button variant="link" asChild>
-          <Link href="/pricing">Detaylı fiyatlandırma</Link>
+        <Button variant="link" href="/pricing">
+          Detaylı fiyatlandırma
         </Button>
       </div>
     </div>

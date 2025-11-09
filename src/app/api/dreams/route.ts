@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createDream } from "@/lib/data-store";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -11,15 +11,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "text or audio required" }, { status: 400 });
   }
 
-  const dream = await prisma.dream.create({
-    data: {
-      userId: "demo-user",
-      text: text || "Ses kaydından transkript bekleniyor",
-      audioUrl: audio ? `supabase://uploads/${audio.name}` : null,
-      transcript: text || null,
-      tags: [],
-      sentiment: null,
-    },
+  const dream = createDream({
+    userId: "demo-user",
+    text: text || "Ses kaydından transkript bekleniyor",
+    audioUrl: audio ? `supabase://uploads/${audio.name}` : null,
+    transcript: text || null,
   });
 
   logger.info({ dreamId: dream.id }, "dream created");
