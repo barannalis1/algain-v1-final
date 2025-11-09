@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+:root {
+  --background: 240 24% 7%;
+  --foreground: 0 0% 100%;
+  --card: 240 24% 9%;
+  --card-foreground: 0 0% 100%;
+  --popover: 240 24% 9%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 273 83% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 13% 18%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 240 13% 20%;
+  --muted-foreground: 240 13% 70%;
+  --accent: 280 70% 65%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 240 10% 25%;
+  --input: 240 10% 25%;
+  --ring: 273 83% 67%;
+  --radius: 1.5rem;
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+}
+
+@layer components {
+input[type="file"]::-webkit-file-upload-button {
+  border: 1px solid hsl(var(--input));
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+}

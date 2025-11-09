@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  PREMIUM
+  PRO
+  ADMIN
+}
+
+enum ReadingType {
+  TAROT
+  ASTRO
+  PALM
+  COFFEE
+}
+
+enum VideoStatus {
+  QUEUED
+  RENDERING
+  DONE
+  ERROR
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  PRO
+}
+
+model User {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  name             String?
+  locale           String             @default("tr")
+  tz               String             @default("Europe/Istanbul")
+  role             Role               @default(USER)
+  createdAt        DateTime           @default(now())
+  profile          Profile?
+  dreams           Dream[]
+  readings         Reading[]
+  videoJobs        VideoJob[]
+  subscription     Subscription?
+  notificationPref NotificationPref?
+}
+
+model Profile {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String   @unique
+  birthdate  DateTime?
+  birthtime  DateTime?
+  birthplace String?
+  goals      Json?
+  moodPrefs  Json?
+}
+
+model Dream {
+  id         String          @id @default(cuid())
+  user       User            @relation(fields: [userId], references: [id])
+  userId     String
+  text       String
+  audioUrl   String?
+  transcript String?
+  tags       String[]        @default([])
+  sentiment  String?
+  createdAt  DateTime        @default(now())
+  interpretation Interpretation?
+  videos     VideoJob[]
+}
+
+model Interpretation {
+  id          String   @id @default(cuid())
+  dream       Dream    @relation(fields: [dreamId], references: [id])
+  dreamId     String   @unique
+  summary     String
+  symbols     String[]
+  advice      String[]
+  tone        String
+  lang        String   @default("tr")
+  createdAt   DateTime @default(now())
+}
+
+model Reading {
+  id         String       @id @default(cuid())
+  user       User         @relation(fields: [userId], references: [id])
+  userId     String
+  type       ReadingType
+  inputJson  Json
+  images     String[]     @default([])
+  resultJson Json
+  createdAt  DateTime     @default(now())
+}
+
+model VideoJob {
+  id         String      @id @default(cuid())
+  user       User        @relation(fields: [userId], references: [id])
+  userId     String
+  dream      Dream?      @relation(fields: [dreamId], references: [id])
+  dreamId    String?
+  status     VideoStatus @default(QUEUED)
+  template   String
+  aspect     String      @default("9:16")
+  fps        Int         @default(24)
+  outputUrl  String?
+  thumbUrl   String?
+  error      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Subscription {
+  id               String            @id @default(cuid())
+  user             User              @relation(fields: [userId], references: [id])
+  userId           String            @unique
+  tier             SubscriptionTier  @default(FREE)
+  stripeCustomerId String?
+  stripeSubId      String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model NotificationPref {
+  id        String  @id @default(cuid())
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String  @unique
+  email     Boolean @default(true)
+  push      Boolean @default(true)
+  telegram  Boolean @default(false)
+  hourLocal Int     @default(9)
+}
+
+model WebhookLog {
+  id        String   @id @default(cuid())
+  type      String
+  payloadJson Json
+  status    String
+  createdAt DateTime @default(now())
+}
