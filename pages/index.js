@@ -549,6 +549,71 @@ function extractKeywordHighlights(text) {
     .map(([word, value]) => ({ word, weight: value }));
 }
 
+function splitSentences(text = '', limit = 10) {
+  if (!text) return [];
+  return text
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function formatList(items = [], conjunction = 've') {
+  const filtered = items.map((item) => item && item.trim()).filter(Boolean);
+  if (!filtered.length) return '';
+  if (filtered.length === 1) return filtered[0];
+  if (filtered.length === 2) return `${filtered[0]} ${conjunction} ${filtered[1]}`;
+  return `${filtered.slice(0, -1).join(', ')} ${conjunction} ${filtered[filtered.length - 1]}`;
+}
+
+function capitalise(text = '') {
+  if (!text) return '';
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function sentenceToVisual(sentence, suffix) {
+  if (!sentence) return '';
+  const trimmed = sentence.trim().replace(/[.!?]+$/, '');
+  return suffix ? `${trimmed}${suffix}` : trimmed;
+}
+
+function pickDreamSentence(sentences, usedIndices, keywords = [], fallbackIndices = [], fallbackText = '') {
+  if (!Array.isArray(sentences) || !sentences.length) {
+    return { sentence: fallbackText, index: -1 };
+  }
+
+  const keywordList = keywords.map((keyword) => keyword.toLowerCase());
+  for (let index = 0; index < sentences.length; index += 1) {
+    if (usedIndices.has(index)) continue;
+    const lowerSentence = sentences[index].toLowerCase();
+    if (keywordList.some((keyword) => lowerSentence.includes(keyword))) {
+      return { sentence: sentences[index], index };
+    }
+  }
+
+  const indices = Array.isArray(fallbackIndices) ? fallbackIndices : [fallbackIndices];
+  for (const rawIndex of indices) {
+    if (typeof rawIndex !== 'number' || Number.isNaN(rawIndex)) continue;
+    const normalisedIndex = rawIndex < 0 ? sentences.length + rawIndex : rawIndex;
+    if (
+      normalisedIndex >= 0 &&
+      normalisedIndex < sentences.length &&
+      !usedIndices.has(normalisedIndex)
+    ) {
+      return { sentence: sentences[normalisedIndex], index: normalisedIndex };
+    }
+  }
+
+  for (let index = 0; index < sentences.length; index += 1) {
+    if (!usedIndices.has(index)) {
+      return { sentence: sentences[index], index };
+    }
+  }
+
+  return { sentence: fallbackText, index: -1 };
+}
+
 function deriveDreamAnalysis({ text, services, uploads }) {
   const normalized = text.toLowerCase();
   const enrichedThemes = themeLibrary
@@ -635,48 +700,167 @@ function deriveDreamAnalysis({ text, services, uploads }) {
   };
 }
 
-function createVideoScenes({ mood, tags, uploads, keywordHighlights }) {
-  const descriptor = tags[0] || 'DreamOracle vizyonu';
-  return baseVideoScenes.map((scene) => {
-    if (scene.id === 'intro') {
-      return {
-        ...scene,
-        narration: `Rüyanızdan yükselen ${descriptor.toLowerCase()} teması DreamOracle stüdyosunu aydınlatıyor.`,
-      };
-    }
-    if (scene.id === 'symbol') {
-      const focusKeyword = keywordHighlights?.[0]?.word;
-      return {
-        ...scene,
-        visual: focusKeyword
-          ? `${descriptor} sembolü ${focusKeyword} anahtar kelimesiyle birlikte parlıyor.`
-          : scene.visual,
-        narration: focusKeyword
-          ? `AI, ${focusKeyword} ifadesini fal rehberleriyle eşleştirerek derinlemesine bir hikâye oluşturuyor.`
-          : scene.narration,
-      };
-    }
-    if (scene.id === 'coaching') {
-      const uploadReference = uploads.coffee
-        ? 'kahve fincanı'
-        : uploads.palm
-        ? 'avuç içi'
-        : uploads.tarotUpload
-        ? 'tarot kartı'
-        : 'rüya günlükleri';
-      return {
-        ...scene,
-        narration: `Yaşam koçluğu modu ${mood.toLowerCase()} modunda ${uploadReference} içgörüleriyle planlar hazırlıyor.`,
-      };
-    }
-    if (scene.id === 'share') {
-      return {
-        ...scene,
-        narration: `DreamOracle paylaşım bağlantınız ${descriptor.toLowerCase()} temasıyla topluluğu bekliyor.`,
-      };
-    }
-    return scene;
-  });
+function createVideoScenes({ text = '', analysis = {}, uploads = {}, selectedServices = [] }) {
+  const sentences = splitSentences(text, 12);
+  const fallbackSynopsis = analysis.synopsis || 'DreamOracle rüyanızı pastel toon sahnelere dönüştürüyor.';
+  const mood = analysis.mood || 'Meraklı';
+  const tags = Array.isArray(analysis.tags) && analysis.tags.length
+    ? analysis.tags
+    : ['Kozmik Açılış', 'Sembol Koridoru', 'Fal Tüneli', 'Uyanış'];
+  const usedIndices = new Set();
+
+  const highlightWords = Array.isArray(analysis.keywordHighlights) && analysis.keywordHighlights.length
+    ? analysis.keywordHighlights.map((item) => item.word).filter(Boolean)
+    : extractKeywordHighlights(text).map((item) => item.word);
+  const distinctHighlights = Array.from(new Set(highlightWords.filter(Boolean)));
+  const primarySymbol = distinctHighlights[0];
+  const secondarySymbol = distinctHighlights[1];
+  const tertiarySymbol = distinctHighlights[2];
+
+  const introPick = pickDreamSentence(
+    sentences,
+    usedIndices,
+    ['uyku', 'kendini', 'buluyorsun', 'başlıyor', 'dal'],
+    [0],
+    fallbackSynopsis
+  );
+  if (introPick.index >= 0) usedIndices.add(introPick.index);
+
+  const portalPick = pickDreamSentence(
+    sentences,
+    usedIndices,
+    ['tren', 'istasyon', 'balık', 'kapı', 'portal', 'peron', 'tavan', 'su', 'kütüphane', 'bilet'],
+    [1, 0],
+    fallbackSynopsis
+  );
+  if (portalPick.index >= 0) usedIndices.add(portalPick.index);
+
+  const guidePick = pickDreamSentence(
+    sentences,
+    usedIndices,
+    ['kitap', 'mesaj', 'söz', 'yer imi', 'şimdi', 'gülümsüyor', 'adım', 'plan', 'rehber'],
+    [2, 1],
+    Array.isArray(analysis.insights) && analysis.insights.length ? analysis.insights[0] : fallbackSynopsis
+  );
+  if (guidePick.index >= 0) usedIndices.add(guidePick.index);
+
+  const awakeningPick = pickDreamSentence(
+    sentences,
+    usedIndices,
+    ['uyan', 'nefes', 'gün', 'cesaret', 'sabah', 'titreşim', 'başlıyor'],
+    [-1],
+    analysis.ritual || fallbackSynopsis
+  );
+
+  const serviceFocus = formatList(selectedServices.map((service) => service.toLowerCase()), 've');
+  const serviceNarration = serviceFocus
+    ? `${capitalise(serviceFocus)} ritüelleri sahne boyunca rehberlik ediyor.`
+    : 'DreamOracle ritüelleri sahne boyunca rehberlik ediyor.';
+
+  const uploadFocus = formatList(
+    [
+      uploads.coffee && 'kahve fincanı motifleri',
+      uploads.palm && 'avuç içi çizgileri',
+      uploads.tarotUpload && 'tarot kartı görselleri',
+      uploads.tarotDeck && uploads.tarotDeck !== 'Kullanıcı Tarot Fotoğrafı'
+        ? `${uploads.tarotDeck} kartları`
+        : '',
+    ].filter(Boolean),
+    've'
+  );
+
+  const highlightGroup = formatList(distinctHighlights.slice(0, 3), 've');
+
+  const introVisual = [
+    `${mood} modundaki toon stüdyoda panoramik bir dolly-in açılıyor.`,
+    sentenceToVisual(introPick.sentence, ' pastel parçacıklara dönüşüyor.'),
+    primarySymbol ? `${capitalise(primarySymbol)} motifleri yumuşak rim ışıklarıyla titreşiyor.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const introNarration = [
+    introPick.sentence || fallbackSynopsis,
+    `DreamOracle ${mood.toLowerCase()} frekansta açılışı kayda alıyor.`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const portalVisual = [
+    portalPick.sentence ? sentenceToVisual(portalPick.sentence, ' neon hatlı koridorlarda yankılanıyor.') : '',
+    highlightGroup ? `${capitalise(highlightGroup)} sembolleri orbit çizgileri üzerinde dans ediyor.` : '',
+    secondarySymbol ? `${capitalise(secondarySymbol)} figürleri sahnenin merkezinde titreşiyor.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const portalNarration = [
+    portalPick.sentence || fallbackSynopsis,
+    highlightGroup
+      ? `AI, ${highlightGroup} temalarını DreamOracle portalında birleştiriyor.`
+      : `DreamOracle, rüyanızın sembollerini detaylı şekilde çözümlüyor.`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const coachingVisual = [
+    uploadFocus
+      ? `${capitalise(uploadFocus)} holografik panellerde beliriyor.`
+      : 'Fal panelleri pastel neonlarla açılıyor.',
+    guidePick.sentence ? sentenceToVisual(guidePick.sentence, ' aksiyon planına dönüşüyor.') : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const insightLine = Array.isArray(analysis.insights) && analysis.insights.length ? analysis.insights[0] : '';
+  const coachingNarration = [
+    guidePick.sentence || insightLine || fallbackSynopsis,
+    serviceNarration,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const awakeningVisual = [
+    awakeningPick.sentence ? sentenceToVisual(awakeningPick.sentence, ' sabah ışıklarına çözülüyor.') : '',
+    analysis.ritual ? `Ritüel: ${analysis.ritual}` : '',
+    tertiarySymbol ? `${capitalise(tertiarySymbol)} parçacıkları finalde gökyüzüne yükseliyor.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const awakeningNarration = [
+    awakeningPick.sentence || analysis.ritual || fallbackSynopsis,
+    `DreamOracle paylaşım bağlantınız ${mood.toLowerCase()} tonda parlıyor.`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return [
+    {
+      id: 'intro',
+      title: `1. Sahne — ${tags[0] || 'Kozmik Açılış'}`,
+      visual: introVisual || fallbackSynopsis,
+      narration: introNarration || fallbackSynopsis,
+    },
+    {
+      id: 'symbol',
+      title: `2. Sahne — ${tags[1] || 'Sembol Koridoru'}`,
+      visual: portalVisual || fallbackSynopsis,
+      narration: portalNarration || fallbackSynopsis,
+    },
+    {
+      id: 'coaching',
+      title: `3. Sahne — ${tags[2] || 'Fal Tüneli'}`,
+      visual: coachingVisual || fallbackSynopsis,
+      narration: coachingNarration || fallbackSynopsis,
+    },
+    {
+      id: 'share',
+      title: `4. Sahne — ${tags[3] || 'Uyanış'}`,
+      visual: awakeningVisual || fallbackSynopsis,
+      narration: awakeningNarration || fallbackSynopsis,
+    },
+  ];
 }
 
 function deriveVideoStyleGuide(analysis = {}) {
@@ -744,6 +928,12 @@ function mergeAnalysis(base, override) {
         ? override.uploadInsights
         : base.uploadInsights,
     keywordHighlights: normalizeKeywordHighlights(override.keywordHighlights, base.keywordHighlights),
+    storyboard:
+      Array.isArray(override.storyboard) && override.storyboard.length
+        ? override.storyboard
+        : Array.isArray(base.storyboard)
+        ? base.storyboard
+        : [],
   };
 
   return merged;
@@ -1062,21 +1252,21 @@ export default function Home() {
       providerMessage = error?.message || 'AI yorum servisine bağlanılamadı.';
     }
 
-    setAnalysis({ ...finalAnalysis, source: provider });
+    const storyboardScenes = createVideoScenes({
+      text: combinedText,
+      analysis: finalAnalysis,
+      uploads: { coffee, palm, tarotUpload, tarotDeck },
+      selectedServices,
+    });
+
+    setAnalysis({ ...finalAnalysis, source: provider, storyboard: storyboardScenes });
     setShareUrl(generateShareUrl(finalAnalysis.mood, finalAnalysis.tags, selectedServices));
 
     const moodPlan = notificationPlaybook[finalAnalysis.mood] || notificationPlaybook.Meraklı;
     setDailyPlan(moodPlan);
 
     const styleGuide = deriveVideoStyleGuide(finalAnalysis);
-    setVideoScenes(
-      createVideoScenes({
-        mood: finalAnalysis.mood,
-        tags: finalAnalysis.tags,
-        uploads: { coffee, palm, tarotUpload, tarotDeck },
-        keywordHighlights: finalAnalysis.keywordHighlights,
-      })
-    );
+    setVideoScenes(storyboardScenes);
     setVideoStyleGuide(styleGuide);
 
     setVideoStatus('idle');
@@ -2541,6 +2731,19 @@ export default function Home() {
                       ))}
                     </ul>
                   </div>
+                  {!!analysis.storyboard?.length && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-white">Animasyon akışı</p>
+                      <ol className="space-y-2 text-sm text-slate-300 list-decimal list-inside">
+                        {analysis.storyboard.map((scene) => (
+                          <li key={`analysis-storyboard-${scene.id}`}>
+                            <span className="font-semibold text-indigo-200">{scene.title}:</span>{' '}
+                            {scene.narration}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
                   {!!analysis.serviceInsights.length && (
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-white">Hizmet rehberi</p>
