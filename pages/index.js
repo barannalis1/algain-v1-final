@@ -759,10 +759,22 @@ export default function Home() {
 
   const startVoiceCapture = async () => {
     if (voiceStatus === 'recording') return;
-    if (typeof window === 'undefined' || !navigator.mediaDevices) {
+
+    const canUseMediaDevices =
+      typeof navigator !== 'undefined' &&
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function';
+
+    if (typeof window === 'undefined' || !canUseMediaDevices) {
       setVoiceError('Tarayıcı ses kaydı desteği sunmuyor.');
       return;
     }
+
+    if (typeof window.MediaRecorder === 'undefined') {
+      setVoiceError('Tarayıcınız ses kaydı için gerekli MediaRecorder API desteğini sunmuyor.');
+      return;
+    }
+
     try {
       setVoiceError('');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
