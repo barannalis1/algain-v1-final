@@ -599,6 +599,56 @@ function createVideoScenes({ mood, tags, uploads, keywordHighlights }) {
   });
 }
 
+function normalizeKeywordHighlights(highlights, fallback = []) {
+  if (!Array.isArray(highlights)) {
+    return fallback;
+  }
+
+  const sanitized = highlights
+    .map((item) => {
+      if (!item) return null;
+      if (typeof item === 'string') {
+        return { word: item.trim(), weight: 1 };
+      }
+      if (typeof item === 'object' && typeof item.word === 'string') {
+        const word = item.word.trim();
+        if (!word) return null;
+        const weightNumber = Number(item.weight);
+        const weight = Number.isFinite(weightNumber) && weightNumber > 0 ? Math.round(weightNumber) : 1;
+        return { word, weight };
+      }
+      return null;
+    })
+    .filter((item) => item && item.word);
+
+  return sanitized.length ? sanitized : fallback;
+}
+
+function mergeAnalysis(base, override) {
+  if (!override) {
+    return base;
+  }
+
+  const merged = {
+    mood: override.mood || base.mood,
+    tags: Array.isArray(override.tags) && override.tags.length ? override.tags : base.tags,
+    synopsis: override.synopsis || base.synopsis,
+    insights: Array.isArray(override.insights) && override.insights.length ? override.insights : base.insights,
+    ritual: override.ritual || base.ritual,
+    serviceInsights:
+      Array.isArray(override.serviceInsights) && override.serviceInsights.length
+        ? override.serviceInsights
+        : base.serviceInsights,
+    uploadInsights:
+      Array.isArray(override.uploadInsights) && override.uploadInsights.length
+        ? override.uploadInsights
+        : base.uploadInsights,
+    keywordHighlights: normalizeKeywordHighlights(override.keywordHighlights, base.keywordHighlights),
+  };
+
+  return merged;
+}
+
 export default function Home() {
   const [dreamText, setDreamText] = useState('');
   const [voiceStatus, setVoiceStatus] = useState('idle');
@@ -607,10 +657,12 @@ export default function Home() {
   const [transcript, setTranscript] = useState('');
   const [selectedServices, setSelectedServices] = useState(['Rüya Falı', 'Yaşam Koçluğu']);
   const [analysis, setAnalysis] = useState(null);
+  const [analysisError, setAnalysisError] = useState('');
   const [videoScenes, setVideoScenes] = useState(baseVideoScenes);
   const [videoStatus, setVideoStatus] = useState('idle');
   const [videoDownloadUrl, setVideoDownloadUrl] = useState('');
   const [videoError, setVideoError] = useState('');
+  const [videoNotice, setVideoNotice] = useState('');
   const [videoFileName, setVideoFileName] = useState('');
   const [shareUrl, setShareUrl] = useState('');
   const [dailyPlan, setDailyPlan] = useState(null);
@@ -640,7 +692,6 @@ export default function Home() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const speechRecognitionRef = useRef(null);
-  const analyzeTimeoutRef = useRef(null);
   const autoAddedServicesRef = useRef(new Set());
   const manuallyRemovedServicesRef = useRef(new Set());
 
@@ -658,18 +709,12 @@ export default function Home() {
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
       }
-      if (analyzeTimeoutRef.current) {
-        if (typeof window !== 'undefined') {
-          window.clearTimeout(analyzeTimeoutRef.current);
-        }
-        analyzeTimeoutRef.current = null;
-      }
     };
   }, [audioUrl, coffee, palm, tarotUpload]);
 
   useEffect(() => {
     return () => {
-      if (videoDownloadUrl) {
+      if (videoDownloadUrl && videoDownloadUrl.startsWith('blob:') && typeof URL !== 'undefined') {
         URL.revokeObjectURL(videoDownloadUrl);
       }
     };
@@ -841,66 +886,112 @@ export default function Home() {
     }
   };
 
-  const computeAnalysis = () => {
+  const computeAnalysis = async () => {
     if (isAnalyzing) return;
-    setIsAnalyzing(true);
 
     const trimmedText = dreamText.trim();
     const trimmedTranscript = transcript.trim();
+
+    if (!trimmedText && !trimmedTranscript) {
+      setAnalysisError('Rüya metni ekleyin veya ses kaydıyla anlatım sağlayın.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisError('');
+
     const combinedParts = [trimmedText];
     if (trimmedTranscript && !trimmedText.includes(trimmedTranscript)) {
       combinedParts.push(trimmedTranscript);
     }
     const combinedText = combinedParts.filter(Boolean).join('\n\n') || trimmedTranscript;
 
-    if (videoDownloadUrl && typeof URL !== 'undefined') {
+    if (videoDownloadUrl && videoDownloadUrl.startsWith('blob:') && typeof URL !== 'undefined') {
       URL.revokeObjectURL(videoDownloadUrl);
     }
     setVideoDownloadUrl('');
     setVideoFileName('');
     setVideoError('');
+    setVideoNotice('');
     setVideoStatus('idle');
 
-    const analysisPayload = deriveDreamAnalysis({
+    const fallbackAnalysis = deriveDreamAnalysis({
       text: combinedText || '',
       services: selectedServices,
       uploads: { coffee, palm, tarotDeck, tarotUpload },
     });
 
-    const finalize = () => {
-      analyzeTimeoutRef.current = null;
-      setAnalysis(analysisPayload);
-      setShareUrl(generateShareUrl(analysisPayload.mood, analysisPayload.tags, selectedServices));
+    let finalAnalysis = fallbackAnalysis;
+    let provider = 'local';
+    let providerMessage = '';
 
-      const moodPlan = notificationPlaybook[analysisPayload.mood] || notificationPlaybook.Meraklı;
-      setDailyPlan(moodPlan);
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dreamText: combinedText,
+          selectedServices,
+          uploadSummary: {
+            hasCoffee: Boolean(coffee),
+            hasPalm: Boolean(palm),
+            tarotDeck,
+            hasTarotUpload: Boolean(tarotUpload),
+          },
+          fallback: fallbackAnalysis,
+        }),
+      });
 
-      setVideoScenes(
-        createVideoScenes({
-          mood: analysisPayload.mood,
-          tags: analysisPayload.tags,
-          uploads: { coffee, palm, tarotUpload },
-          keywordHighlights: analysisPayload.keywordHighlights,
-        })
-      );
-
-      setVideoStatus('idle');
-      setVideoError('');
-      setVideoFileName('');
-      setVideoDownloadUrl('');
-
-      setIsAnalyzing(false);
-      setAnalysisFresh(true);
-      setActiveCategory('fortune');
-    };
-
-    if (typeof window !== 'undefined') {
-      if (analyzeTimeoutRef.current) {
-        window.clearTimeout(analyzeTimeoutRef.current);
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.analysis) {
+          finalAnalysis = mergeAnalysis(fallbackAnalysis, data.analysis);
+          provider = data?.source === 'openai' ? 'openai' : 'local';
+          providerMessage = data?.note || '';
+        } else if (data?.error) {
+          providerMessage = data.error;
+        }
+      } else {
+        const errorData = await response.json().catch(() => null);
+        providerMessage = errorData?.error || 'AI yorum servisi yanıt vermedi.';
       }
-      analyzeTimeoutRef.current = window.setTimeout(finalize, 350);
+    } catch (error) {
+      providerMessage = error?.message || 'AI yorum servisine bağlanılamadı.';
+    }
+
+    setAnalysis({ ...finalAnalysis, source: provider });
+    setShareUrl(generateShareUrl(finalAnalysis.mood, finalAnalysis.tags, selectedServices));
+
+    const moodPlan = notificationPlaybook[finalAnalysis.mood] || notificationPlaybook.Meraklı;
+    setDailyPlan(moodPlan);
+
+    setVideoScenes(
+      createVideoScenes({
+        mood: finalAnalysis.mood,
+        tags: finalAnalysis.tags,
+        uploads: { coffee, palm, tarotUpload },
+        keywordHighlights: finalAnalysis.keywordHighlights,
+      })
+    );
+
+    setVideoStatus('idle');
+    setVideoError('');
+    setVideoFileName('');
+    setVideoDownloadUrl('');
+    setVideoNotice('');
+
+    setIsAnalyzing(false);
+    setAnalysisFresh(true);
+    setActiveCategory('fortune');
+
+    if (provider !== 'openai' && providerMessage) {
+      setAnalysisError(`${providerMessage} Yerel DreamOracle motoru kullanıldı.`);
+    } else if (providerMessage) {
+      setAnalysisError(providerMessage);
     } else {
-      finalize();
+      setAnalysisError('');
     }
   };
 
@@ -911,16 +1002,17 @@ export default function Home() {
     }
     if (videoStatus === 'rendering') return;
 
-    if (typeof window === 'undefined' || typeof window.MediaRecorder === 'undefined') {
-      setVideoError('Tarayıcınız video kaydını desteklemiyor.');
-      setVideoStatus('error');
-      return;
-    }
+    const revokeExistingUrl = () => {
+      if (videoDownloadUrl && videoDownloadUrl.startsWith('blob:') && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(videoDownloadUrl);
+      }
+    };
 
-    setVideoError('');
-    setVideoStatus('rendering');
+    const renderStoryboardFallback = async () => {
+      if (typeof window === 'undefined' || typeof window.MediaRecorder === 'undefined') {
+        throw new Error('Tarayıcınız yerel storyboard videosu üretimini desteklemiyor.');
+      }
 
-    try {
       const canvas = document.createElement('canvas');
       canvas.width = 1280;
       canvas.height = 720;
@@ -1136,15 +1228,14 @@ export default function Home() {
       const recordingPromise = new Promise((resolve, reject) => {
         recorder.onstop = () => {
           try {
-            if (videoDownloadUrl && typeof URL !== 'undefined') {
-              URL.revokeObjectURL(videoDownloadUrl);
-            }
             const blob = new Blob(chunks, { type: supportedMimeType || 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            setVideoDownloadUrl(url);
-            setVideoFileName(`dreamoracle-${Date.now()}.webm`);
-            setVideoStatus('ready');
-            resolve();
+            resolve({
+              blob,
+              fileName: `dreamoracle-${Date.now()}.${
+                supportedMimeType && supportedMimeType.includes('mp4') ? 'mp4' : 'webm'
+              }`,
+              mimeType: supportedMimeType || 'video/webm',
+            });
           } catch (error) {
             reject(error);
           } finally {
@@ -1168,13 +1259,111 @@ export default function Home() {
       }
       recorder.stop();
 
-      await recordingPromise;
+      return recordingPromise;
+    };
+
+    const applyBlobResult = (result) => {
+      revokeExistingUrl();
+      const url = URL.createObjectURL(result.blob);
+      setVideoDownloadUrl(url);
+      setVideoFileName(result.fileName);
+      setVideoStatus('ready');
+      setVideoError('');
+    };
+
+    try {
+      setVideoError('');
+      setVideoNotice('');
+      setVideoStatus('rendering');
+
+      const response = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mood: analysis.mood,
+          tags: analysis.tags,
+          synopsis: analysis.synopsis,
+          scenes: videoScenes,
+          keywordHighlights: analysis.keywordHighlights,
+          selectedServices,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.downloadUrl) {
+          revokeExistingUrl();
+          setVideoDownloadUrl(data.downloadUrl);
+          setVideoFileName(data.fileName || 'dreamoracle-ai-video.mp4');
+          setVideoStatus('ready');
+          setVideoNotice(data?.note || 'Yapay zekâ destekli video hazır.');
+          setVideoError('');
+          return;
+        }
+        if (data?.base64Video) {
+          revokeExistingUrl();
+          const binary = atob(data.base64Video);
+          const len = binary.length;
+          const bytes = new Uint8Array(len);
+          for (let index = 0; index < len; index += 1) {
+            bytes[index] = binary.charCodeAt(index);
+          }
+          const blob = new Blob([bytes], { type: data.mimeType || 'video/mp4' });
+          const url = URL.createObjectURL(blob);
+          setVideoDownloadUrl(url);
+          setVideoFileName(data.fileName || 'dreamoracle-ai-video.mp4');
+          setVideoStatus('ready');
+          setVideoNotice(data?.note || 'Yapay zekâ destekli video hazır.');
+          setVideoError('');
+          return;
+        }
+        if (data?.fallback) {
+          try {
+            const fallbackResult = await renderStoryboardFallback();
+            applyBlobResult(fallbackResult);
+            setVideoNotice(
+              data?.reason
+                ? `${data.reason} Yerel storyboard animasyonu üretildi.`
+                : 'Yerel storyboard animasyonu üretildi.'
+            );
+            setVideoError('');
+            return;
+          } catch (fallbackError) {
+            setVideoStatus('error');
+            setVideoError(
+              fallbackError?.message || 'Yerel storyboard üretimi desteklenmiyor. Yapay zekâ videosu alınamadı.'
+            );
+            setVideoNotice('');
+            return;
+          }
+        }
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+      } else {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Video servisi yanıt vermedi.');
+      }
+
+      const fallbackResult = await renderStoryboardFallback();
+      applyBlobResult(fallbackResult);
+      setVideoNotice('AI video servisi pasif. Yerel storyboard animasyonu üretildi.');
     } catch (error) {
-      console.error(error);
-      setVideoStatus('error');
-      setVideoError(
-        error?.message || 'Video üretimi başarısız oldu. Lütfen farklı bir tarayıcıyla tekrar deneyin.'
-      );
+      try {
+        const fallbackResult = await renderStoryboardFallback();
+        applyBlobResult(fallbackResult);
+        setVideoNotice('AI video servisine ulaşılamadı. Yerel storyboard animasyonu üretildi.');
+        setVideoError('');
+      } catch (fallbackError) {
+        console.error(fallbackError);
+        setVideoStatus('error');
+        setVideoError(
+          fallbackError?.message || error?.message || 'Video üretimi başarısız oldu. Lütfen tekrar deneyin.'
+        );
+        setVideoNotice('');
+      }
     }
   };
 
@@ -1402,6 +1591,9 @@ export default function Home() {
               )}
             </div>
             {videoError && <p className="mt-2 text-xs font-semibold text-rose-300">{videoError}</p>}
+            {videoNotice && (
+              <p className="mt-2 text-xs font-semibold text-sky-300">{videoNotice}</p>
+            )}
             {videoDownloadUrl && (
               <video controls src={videoDownloadUrl} className="mt-4 w-full rounded-2xl border border-white/10 bg-black" />
             )}
@@ -1465,6 +1657,7 @@ export default function Home() {
     dailyPlan,
     dreamText,
     hasAnalysis,
+    analysisError,
     palm,
     selectedServices,
     shareUrl,
@@ -1474,6 +1667,7 @@ export default function Home() {
     transcript,
     videoDownloadUrl,
     videoError,
+    videoNotice,
     videoFileName,
     videoStatus,
     videoScenes,
@@ -1726,6 +1920,9 @@ export default function Home() {
               <p className="mt-3 text-xs text-slate-400">
                 Analiz başlatıldığında kahve, el ve tarot verileri de yorum motoruna dahil edilir.
               </p>
+              {analysisError && (
+                <p className="mt-3 text-sm font-semibold text-amber-300">{analysisError}</p>
+              )}
               {analysis && !analysisFresh && (
                 <p className="mt-2 text-xs text-amber-300">
                   Bilgileriniz güncellendi. Yeni sonuç almak için analizi yeniden çalıştırın.
@@ -1735,7 +1932,20 @@ export default function Home() {
                 <div className="mt-8 space-y-6">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="text-lg font-semibold text-white">DreamOracle yorumu</h3>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="text-lg font-semibold text-white">DreamOracle yorumu</h3>
+                        {analysis.source && (
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                              analysis.source === 'openai'
+                                ? 'border border-sky-400/40 bg-sky-500/10 text-sky-100'
+                                : 'border border-slate-400/30 bg-slate-500/10 text-slate-100'
+                            }`}
+                          >
+                            {analysis.source === 'openai' ? 'OpenAI destekli yorum' : 'Yerel yorum motoru'}
+                          </span>
+                        )}
+                      </div>
                       <span
                         className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                           analysisFresh
