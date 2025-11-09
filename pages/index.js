@@ -950,64 +950,188 @@ export default function Home() {
         }
       };
 
-      const wait = (duration) =>
-        new Promise((resolve) => {
-          window.setTimeout(resolve, duration);
+      const particleCount = 90;
+      const particles = Array.from({ length: particleCount }, () => ({
+        x: Math.random(),
+        y: Math.random(),
+        depth: Math.random(),
+        size: Math.random() * 1.8 + 0.4,
+      }));
+
+      const wrapText = (text, startY, fontSize, color, lineHeight, fontWeight = '600', options = {}) => {
+        context.font = `${fontWeight} ${fontSize}px 'Inter', 'Segoe UI', sans-serif`;
+        context.fillStyle = color;
+        context.textBaseline = 'top';
+        context.textAlign = options.align || 'left';
+        const maxWidth = (options.maxWidth || canvas.width) - 200;
+        const words = text.split(' ');
+        let line = '';
+        let y = startY;
+
+        words.forEach((word, index) => {
+          const testLine = line ? `${line} ${word}` : word;
+          const { width } = context.measureText(testLine);
+          if (width > maxWidth && line) {
+            context.fillText(line, 100, y);
+            line = word;
+            y += lineHeight;
+          } else {
+            line = testLine;
+          }
+
+          if (index === words.length - 1) {
+            context.fillText(line, 100, y);
+          }
         });
 
-      const drawScene = (scene) => {
-        context.fillStyle = '#020617';
-        context.fillRect(0, 0, canvas.width, canvas.height);
+        return y + lineHeight;
+      };
 
+      const drawSceneFrame = (scene, progress, timestamp, delta) => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        const gradientShift = Math.sin(timestamp / 900) * 0.2;
         const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(0, '#312e81');
-        gradient.addColorStop(0.5, '#4c1d95');
-        gradient.addColorStop(1, '#831843');
+        gradient.addColorStop(Math.max(0, 0 + gradientShift), '#0f172a');
+        gradient.addColorStop(Math.min(1, 0.45 + gradientShift), '#312e81');
+        gradient.addColorStop(Math.min(1, 1 + gradientShift), '#831843');
         context.fillStyle = gradient;
         context.fillRect(0, 0, canvas.width, canvas.height);
 
-        context.fillStyle = 'rgba(2, 6, 23, 0.6)';
-        context.fillRect(60, 60, canvas.width - 120, canvas.height - 120);
+        const deltaSeconds = Math.max(delta / 1000, 1 / 60);
+        particles.forEach((particle) => {
+          particle.y += deltaSeconds * (0.12 + particle.depth * 0.35);
+          if (particle.y > 1) {
+            particle.y -= 1;
+            particle.x = Math.random();
+          }
+          const px = particle.x * canvas.width;
+          const py = particle.y * canvas.height;
+          const size = particle.size * (1 + Math.sin(timestamp / 400 + particle.depth * 6) * 0.3);
+          context.beginPath();
+          context.fillStyle = `rgba(165, 243, 252, ${0.25 + particle.depth * 0.5})`;
+          context.arc(px, py, size, 0, Math.PI * 2);
+          context.fill();
+        });
 
-        const renderTextBlock = (text, startY, fontSize, color, lineHeight, fontWeight = '600') => {
-          context.font = `${fontWeight} ${fontSize}px 'Inter', 'Segoe UI', sans-serif`;
-          context.fillStyle = color;
-          context.textBaseline = 'top';
-          context.textAlign = 'left';
-          const words = text.split(' ');
-          const maxWidth = canvas.width - 200;
-          let line = '';
-          let y = startY;
+        const cardOpacity = Math.min(1, progress * 1.15);
+        context.save();
+        context.globalAlpha = cardOpacity;
+        context.fillStyle = 'rgba(2, 6, 23, 0.78)';
+        context.beginPath();
+        const borderRadius = 36;
+        const cardX = 60;
+        const cardY = 60;
+        const cardWidth = canvas.width - 120;
+        const cardHeight = canvas.height - 120;
+        context.moveTo(cardX + borderRadius, cardY);
+        context.lineTo(cardX + cardWidth - borderRadius, cardY);
+        context.quadraticCurveTo(cardX + cardWidth, cardY, cardX + cardWidth, cardY + borderRadius);
+        context.lineTo(cardX + cardWidth, cardY + cardHeight - borderRadius);
+        context.quadraticCurveTo(
+          cardX + cardWidth,
+          cardY + cardHeight,
+          cardX + cardWidth - borderRadius,
+          cardY + cardHeight
+        );
+        context.lineTo(cardX + borderRadius, cardY + cardHeight);
+        context.quadraticCurveTo(cardX, cardY + cardHeight, cardX, cardY + cardHeight - borderRadius);
+        context.lineTo(cardX, cardY + borderRadius);
+        context.quadraticCurveTo(cardX, cardY, cardX + borderRadius, cardY);
+        context.closePath();
+        context.fill();
+        context.restore();
 
-          words.forEach((word, index) => {
-            const testLine = line ? `${line} ${word}` : word;
-            const { width } = context.measureText(testLine);
-            if (width > maxWidth && line) {
-              context.fillText(line, 100, y);
-              line = word;
-              y += lineHeight;
-            } else {
-              line = testLine;
-            }
+        const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+        const easeOut = easeOutCubic(Math.min(progress * 1.1, 1));
+        const slideOffset = (1 - easeOut) * 80;
 
-            if (index === words.length - 1) {
-              context.fillText(line, 100, y);
-            }
-          });
+        context.save();
+        context.globalAlpha = Math.min(1, progress * 1.4);
+        const titleY = 140 + slideOffset;
+        const visualY = wrapText(scene.title, titleY, 46, '#bfdbfe', 54, '700');
+        const narrationStart = wrapText(scene.visual, visualY + 20, 28, '#e2e8f0', 38, '500');
+        wrapText(scene.narration, narrationStart + 20, 30, '#ddd6fe', 40, '500');
+        context.restore();
 
-          return y + lineHeight;
-        };
+        const orbitX = canvas.width - 220;
+        const orbitY = 200;
+        const orbitRadius = 70 + easeOut * 50;
+        context.save();
+        context.strokeStyle = 'rgba(129, 140, 248, 0.35)';
+        context.lineWidth = 3;
+        context.beginPath();
+        context.ellipse(orbitX, orbitY, orbitRadius, orbitRadius * 0.65, 0, 0, Math.PI * 2);
+        context.stroke();
+        const orbAngle = timestamp / 420;
+        const orbX = orbitX + Math.cos(orbAngle) * orbitRadius;
+        const orbY = orbitY + Math.sin(orbAngle) * orbitRadius * 0.65;
+        const orbSize = 10 + easeOut * 8;
+        const orbGradient = context.createRadialGradient(orbX, orbY, 0, orbX, orbY, orbSize * 1.6);
+        orbGradient.addColorStop(0, 'rgba(244, 114, 182, 0.95)');
+        orbGradient.addColorStop(1, 'rgba(244, 114, 182, 0)');
+        context.fillStyle = orbGradient;
+        context.beginPath();
+        context.arc(orbX, orbY, orbSize * 1.6, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
 
-        const nextY = renderTextBlock(scene.title, 140, 46, '#bfdbfe', 54, '700');
-        const visualY = renderTextBlock(scene.visual, nextY + 20, 28, '#e2e8f0', 38, '500');
-        renderTextBlock(scene.narration, visualY + 20, 30, '#ddd6fe', 40, '500');
-
-        context.fillStyle = '#22d3ee';
-        context.font = "500 20px 'Inter', 'Segoe UI', sans-serif";
-        context.fillText('dreamoracle.space', 100, canvas.height - 120);
+        context.save();
+        context.globalAlpha = Math.min(1, progress * 1.3);
+        const progressWidth = (canvas.width - 240) * Math.max(progress, 0.08);
+        context.fillStyle = 'rgba(14, 116, 144, 0.35)';
+        context.fillRect(120, canvas.height - 140, canvas.width - 240, 8);
+        const gradientBar = context.createLinearGradient(120, 0, 120 + progressWidth, 0);
+        gradientBar.addColorStop(0, '#22d3ee');
+        gradientBar.addColorStop(1, '#f472b6');
+        context.fillStyle = gradientBar;
+        context.fillRect(120, canvas.height - 140, progressWidth, 8);
+        context.font = "500 22px 'Inter', 'Segoe UI', sans-serif";
+        context.fillStyle = '#f1f5f9';
+        context.fillText('dreamoracle.space', 120, canvas.height - 120);
         context.fillStyle = '#f472b6';
-        context.fillText(`Mood: ${analysis.mood}`, 100, canvas.height - 80);
+        context.fillText(`Mood: ${analysis.mood}`, 120, canvas.height - 90);
+        context.restore();
       };
+
+      const now = typeof window.performance !== 'undefined' && window.performance.now
+        ? () => window.performance.now()
+        : () => Date.now();
+
+      const hasRaf = typeof window.requestAnimationFrame === 'function';
+      const scheduleFrame = hasRaf
+        ? (fn) => window.requestAnimationFrame(fn)
+        : (fn) => window.setTimeout(() => fn(now()), 16);
+      const cancelFrame = hasRaf
+        ? (id) => window.cancelAnimationFrame(id)
+        : (id) => window.clearTimeout(id);
+
+      let activeAnimationId = null;
+
+      const animateScene = (scene) =>
+        new Promise((resolve) => {
+          const duration = 3200;
+          let startTimestamp = null;
+          let lastTimestamp = null;
+
+          const step = (timestamp) => {
+            if (startTimestamp === null) {
+              startTimestamp = timestamp;
+            }
+            const elapsed = timestamp - startTimestamp;
+            const delta = lastTimestamp === null ? 16 : timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+            const progress = Math.min(elapsed / duration, 1);
+            drawSceneFrame(scene, progress, timestamp, delta);
+            if (elapsed < duration) {
+              activeAnimationId = scheduleFrame(step);
+            } else {
+              resolve();
+            }
+          };
+
+          activeAnimationId = scheduleFrame(step);
+        });
 
       const recordingPromise = new Promise((resolve, reject) => {
         recorder.onstop = () => {
@@ -1029,14 +1153,18 @@ export default function Home() {
         };
         recorder.onerror = (event) => {
           stream.getTracks().forEach((track) => track.stop());
+          if (activeAnimationId !== null) {
+            cancelFrame(activeAnimationId);
+          }
           reject(event.error || new Error('Video kaydı sırasında bir hata oluştu.'));
         };
       });
 
       recorder.start();
       for (const scene of videoScenes) {
-        drawScene(scene);
-        await wait(1800);
+        await animateScene(scene);
+        drawSceneFrame(scene, 1, now(), 16);
+        await new Promise((resolve) => window.setTimeout(resolve, 160));
       }
       recorder.stop();
 
